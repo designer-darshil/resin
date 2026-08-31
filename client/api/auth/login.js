@@ -32,7 +32,7 @@ module.exports = async (req, res) => {
     // Try database authentication first
     let user = null;
     try {
-      const db = require('../../server/db/database');
+      const db = require('../../../server/db/database');
       user = db.prepare(`
         SELECT u.*, r.name as role_name
         FROM users u JOIN roles r ON u.role_id = r.id
