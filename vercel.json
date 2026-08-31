@@ -1,14 +1,14 @@
 {
+  "version": 2,
   "buildCommand": "npm --prefix client install && npm --prefix client run build",
   "outputDirectory": "client/dist",
-  "framework": "vite",
   "rewrites": [
     {
       "source": "/api/(.*)",
       "destination": "/api"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api/|favicon\\.ico|favicon\\.svg|assets/).*)",
       "destination": "/index.html"
     }
   ]
