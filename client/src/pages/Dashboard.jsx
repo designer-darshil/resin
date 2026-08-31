@@ -16,11 +16,11 @@ export default function Dashboard() {
   if (loading) return (
     <div className="page">
       <div style={{ marginBottom: 24 }}>
-        <div className="skeleton skeleton-line" style={{ width: 200, height: 28, marginBottom: 8 }} />
-        <div className="skeleton skeleton-line short" style={{ height: 16 }} />
+        <div className="skeleton-line" style={{ width: 160, height: 24, marginBottom: 6 }} />
+        <div className="skeleton-line" style={{ width: 220, height: 14 }} />
       </div>
-      <div className="skeleton skeleton-line" style={{ height: 48, marginBottom: 16 }} />
-      <div className="skeleton skeleton-line" style={{ height: 48, marginBottom: 16 }} />
+      <div className="skeleton-line" style={{ height: 80, marginBottom: 16 }} />
+      <div className="skeleton-line" style={{ height: 160 }} />
     </div>
   );
 
@@ -29,173 +29,195 @@ export default function Dashboard() {
 
   return (
     <div className="page">
-      <div className="page-header" style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: 16, marginBottom: 24 }}>
+      {/* Dashboard Header */}
+      <div className="page-header">
         <div className="page-header-left">
-          <h1 className="page-title">Morning Briefing</h1>
+          <h1 className="page-title">Dashboard</h1>
           <p className="page-subtitle">{today}</p>
         </div>
         <div className="page-header-actions">
-          <button className="btn btn-primary btn-sm" onClick={() => navigate('/coating-jobs?new=1')}>
-            + New Job
+          <button className="btn btn-secondary btn-sm" onClick={() => navigate('/purchases')}>
+            + New Purchase
+          </button>
+          <button className="btn btn-primary btn-sm" onClick={() => navigate('/coating-jobs')}>
+            + Create Coating Job
           </button>
         </div>
       </div>
 
-      <div className="grid-2" style={{ gap: 24, alignItems: 'start' }}>
+      {/* Operational Work Status Progress Strip */}
+      <div style={{
+        background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)',
+        borderRadius: 'var(--radius-lg)', padding: 'var(--space-4) var(--space-5)', marginBottom: 'var(--space-6)'
+      }}>
+        <div style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 'var(--space-3)' }}>
+          OPERATIONAL WORK STATUS
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 'var(--space-4)' }}>
+          <div style={{ cursor: 'pointer' }} onClick={() => navigate('/coating-jobs')}>
+            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>In Coating</div>
+            <div style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700, color: 'var(--text-primary)' }}>{s.jobs_in_progress || 0}</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Active batch jobs</div>
+          </div>
+          <div style={{ cursor: 'pointer' }} onClick={() => navigate('/coating-jobs')}>
+            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--status-warning)' }}>Waiting for QC</div>
+            <div style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700, color: 'var(--status-warning)' }}>{s.jobs_quality_check || 0}</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Inspection required</div>
+          </div>
+          <div style={{ cursor: 'pointer' }} onClick={() => navigate('/dispatch')}>
+            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-primary)' }}>Ready for Dispatch</div>
+            <div style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700, color: 'var(--color-primary)' }}>{s.dispatches_pending || 0}</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Finished diamonds</div>
+          </div>
+          <div style={{ cursor: 'pointer' }} onClick={() => navigate('/stock')}>
+            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--status-success)' }}>Available Raw Stock</div>
+            <div style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700, color: 'var(--status-success)' }}>{fmtQty(s.total_raw_stock || 0)}</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Pcs in inventory</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main 2-Column Operational Grid */}
+      <div className="form-row" style={{ alignItems: 'start', gap: 'var(--space-6)' }}>
         
-        {/* LEFT COLUMN: Needs Attention & Today's Work */}
+        {/* LEFT COLUMN: Needs Attention & Quick Lists */}
         <div>
-          {/* Needs Attention */}
-          <div className="section" style={{ marginBottom: 32 }}>
-            <div className="section-header">
-              <h2 className="section-title text-warning" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: 'var(--color-warning)' }}></span>
-                Needs Attention
-              </h2>
+          {/* Needs Attention Section */}
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: 'var(--space-3) var(--space-4)', background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--status-warning)' }} />
+              <strong style={{ fontSize: 'var(--font-size-sm)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Needs Attention</strong>
             </div>
-            
-            <div className="card" style={{ padding: 0 }}>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                {s.jobs_due_today > 0 && (
-                  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', cursor: 'pointer' }} onClick={() => navigate('/coating-jobs')}>
-                    <span style={{ fontWeight: 500 }}>Coating Jobs Due Today</span>
-                    <span className="badge badge-warning">{s.jobs_due_today}</span>
+
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {s.jobs_due_today > 0 && (
+                <div style={{ padding: 'var(--space-3) var(--space-4)', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => navigate('/coating-jobs')}>
+                  <div>
+                    <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>Coating Jobs Due Today</div>
+                    <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>Scheduled for completion today</div>
                   </div>
-                )}
-                {s.jobs_overdue > 0 && (
-                  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', cursor: 'pointer' }} onClick={() => navigate('/coating-jobs')}>
-                    <span style={{ fontWeight: 500, color: 'var(--color-error)' }}>Overdue Coating Jobs</span>
-                    <span className="badge badge-error">{s.jobs_overdue}</span>
+                  <span className="badge badge-warning">{s.jobs_due_today}</span>
+                </div>
+              )}
+
+              {s.jobs_overdue > 0 && (
+                <div style={{ padding: 'var(--space-3) var(--space-4)', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => navigate('/coating-jobs')}>
+                  <div>
+                    <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--status-error)' }}>Overdue Jobs</div>
+                    <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>Past scheduled due date</div>
                   </div>
-                )}
-                {s.jobs_quality_check > 0 && (
-                  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', cursor: 'pointer' }} onClick={() => navigate('/coating-jobs')}>
-                    <span style={{ fontWeight: 500 }}>Jobs waiting for QC</span>
-                    <span className="badge badge-accent">{s.jobs_quality_check}</span>
+                  <span className="badge badge-error">{s.jobs_overdue}</span>
+                </div>
+              )}
+
+              {s.overtime_pending > 0 && (
+                <div style={{ padding: 'var(--space-3) var(--space-4)', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => navigate('/overtime')}>
+                  <div>
+                    <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>Overtime Approvals</div>
+                    <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>Submitted coater hours</div>
                   </div>
-                )}
-                {s.dispatches_pending > 0 && (
-                  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', cursor: 'pointer' }} onClick={() => navigate('/dispatch')}>
-                    <span style={{ fontWeight: 500 }}>Ready for Dispatch</span>
-                    <span className="badge badge-warning">{s.dispatches_pending}</span>
-                  </div>
-                )}
-                {s.overtime_pending > 0 && (
-                  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', cursor: 'pointer' }} onClick={() => navigate('/overtime')}>
-                    <span style={{ fontWeight: 500 }}>Pending Overtime Approvals</span>
-                    <span className="badge badge-warning">{s.overtime_pending}</span>
-                  </div>
-                )}
-                
-                {(!s.jobs_due_today && !s.jobs_overdue && !s.jobs_quality_check && !s.dispatches_pending && !s.overtime_pending) && (
-                  <div style={{ padding: '16px', color: 'var(--color-text-muted)', textAlign: 'center' }}>
-                    All clear! Nothing urgently requires your attention.
-                  </div>
-                )}
-              </div>
+                  <span className="badge badge-warning">{s.overtime_pending}</span>
+                </div>
+              )}
+
+              {(!s.jobs_due_today && !s.jobs_overdue && !s.overtime_pending) && (
+                <div style={{ padding: 'var(--space-4)', textAlign: 'center', color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)' }}>
+                  ✓ All operational schedules and approvals are currently up to date.
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Today's Work Queue */}
-          <div className="section">
-            <div className="section-header" style={{ marginBottom: 12 }}>
-              <h2 className="section-title">Today's Work</h2>
+          {/* Active Jobs in Progress */}
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: 'var(--space-3) var(--space-4)', background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <strong style={{ fontSize: 'var(--font-size-sm)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Active Coating Jobs</strong>
               <button className="btn btn-ghost btn-sm" onClick={() => navigate('/coating-jobs')}>View All →</button>
             </div>
-            <div className="table-wrapper">
-              {data?.recent_jobs?.length === 0 ? (
-                 <div className="empty-state" style={{ padding: '24px' }}>
-                   <p>No active coating jobs</p>
-                 </div>
-              ) : (
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Job ID</th>
-                      <th>Party</th>
-                      <th>Status</th>
-                      <th style={{ textAlign: 'right' }}>Done / Qty</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data?.recent_jobs?.map(job => (
-                      <tr key={job.job_code} style={{ cursor: 'pointer' }} onClick={() => navigate('/coating-jobs')}>
-                        <td style={{ fontWeight: 600 }}>{job.job_code}</td>
-                        <td>{job.customer_name || '—'}</td>
-                        <td><StatusBadge status={job.job_status} /></td>
-                        <td style={{ textAlign: 'right' }}>{job.completed_quantity} / {job.input_quantity}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+
+            <div>
+              {(data?.active_jobs || []).slice(0, 5).map(job => (
+                <div key={job.id} style={{
+                  padding: 'var(--space-3) var(--space-4)', borderBottom: '1px solid var(--border-subtle)',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer'
+                }} onClick={() => navigate(`/coating-jobs/${job.id}`)}>
+                  <div>
+                    <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                      <span className="tag">{job.job_code}</span>
+                      <span style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>{job.customer_name || 'No Party'}</span>
+                    </div>
+                    <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginTop: 2 }}>
+                      {job.coating_type || 'Standard Resin'} · {fmtQty(job.input_quantity)} pcs
+                    </div>
+                  </div>
+                  <StatusBadge status={job.job_status} />
+                </div>
+              ))}
+              {(!data?.active_jobs || data.active_jobs.length === 0) && (
+                <div style={{ padding: 'var(--space-4)', textAlign: 'center', color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)' }}>
+                  No active coating jobs.
+                </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Stock & Financials */}
+        {/* RIGHT COLUMN: Financial Overview & Recent Dispatches */}
         <div>
-          {/* Stock Operational Flow */}
-          <div className="section" style={{ marginBottom: 32 }}>
-            <h2 className="section-title" style={{ marginBottom: 16 }}>Operational Stock Flow</h2>
-            <div className="card" style={{ padding: '20px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ textAlign: 'center', flex: 1, cursor: 'pointer' }} onClick={() => navigate('/stock')}>
-                <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-text-primary)' }}>{fmtQty(s.stock_raw)}</div>
-                <div className="text-muted text-xs">Available</div>
-              </div>
-              <div style={{ color: 'var(--color-border)' }}>→</div>
-              <div style={{ textAlign: 'center', flex: 1, cursor: 'pointer' }} onClick={() => navigate('/stock')}>
-                <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-accent)' }}>{fmtQty(s.stock_in_coating)}</div>
-                <div className="text-muted text-xs">In Coating</div>
-              </div>
-              <div style={{ color: 'var(--color-border)' }}>→</div>
-              <div style={{ textAlign: 'center', flex: 1, cursor: 'pointer' }} onClick={() => navigate('/stock')}>
-                <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-success)' }}>{fmtQty(s.stock_finished)}</div>
-                <div className="text-muted text-xs">Finished</div>
-              </div>
+          {/* Financial Balances Card */}
+          <div className="card">
+            <div className="card-header">
+              <strong style={{ fontSize: 'var(--font-size-sm)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Financial Snapshot</strong>
+              <button className="btn btn-ghost btn-sm" onClick={() => navigate('/payments')}>Payments →</button>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12, gap: 24 }}>
-              <div className="text-sm">
-                 <span className="text-muted">Total Rejected:</span> <strong style={{ color: 'var(--color-error)' }}>{fmtQty(s.stock_rejected)} pcs</strong>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+              <div>
+                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Buyer Receivables</div>
+                <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, color: 'var(--text-primary)', marginTop: 4 }}>
+                  {fmtCurrency(s.total_receivable || 0)}
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Pending collection</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Supplier Payables</div>
+                <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, color: 'var(--status-error)', marginTop: 4 }}>
+                  {fmtCurrency(s.total_payable || 0)}
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Outstanding raw purchases</div>
               </div>
             </div>
           </div>
 
-          {/* Financial Snapshot */}
-          <div className="section" style={{ marginBottom: 32 }}>
-             <h2 className="section-title" style={{ marginBottom: 16 }}>Financial Snapshot</h2>
-             <div className="grid-2" style={{ gap: 16 }}>
-               <div className="card" style={{ padding: 16, cursor: 'pointer' }} onClick={() => navigate('/payments')}>
-                 <div className="text-muted text-sm" style={{ marginBottom: 4 }}>Today's Received</div>
-                 <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--color-success)' }}>{fmtCurrency(s.payments_today)}</div>
-               </div>
-               <div className="card" style={{ padding: 16, cursor: 'pointer' }} onClick={() => navigate('/payments')}>
-                 <div className="text-muted text-sm" style={{ marginBottom: 4 }}>Parties w/ Balances</div>
-                 <div style={{ fontSize: 22, fontWeight: 700 }}>{s.customers_outstanding}</div>
-               </div>
-               <div className="card" style={{ padding: 16, cursor: 'pointer' }} onClick={() => navigate('/salary')}>
-                 <div className="text-muted text-sm" style={{ marginBottom: 4 }}>Pending Salaries</div>
-                 <div style={{ fontSize: 22, fontWeight: 700, color: s.salary_pending > 0 ? 'var(--color-warning)' : 'inherit' }}>{s.salary_pending}</div>
-               </div>
-               <div className="card" style={{ padding: 16 }}>
-                 <div className="text-muted text-sm" style={{ marginBottom: 4 }}>Active Staff</div>
-                 <div style={{ fontSize: 22, fontWeight: 700 }}>{s.employees_active}</div>
-               </div>
-             </div>
+          {/* Recent Dispatches */}
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: 'var(--space-3) var(--space-4)', background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <strong style={{ fontSize: 'var(--font-size-sm)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Recent Dispatches</strong>
+              <button className="btn btn-ghost btn-sm" onClick={() => navigate('/dispatch')}>Dispatch Hub →</button>
+            </div>
+            <div>
+              {(data?.recent_dispatches || []).slice(0, 5).map(d => (
+                <div key={d.id} style={{
+                  padding: 'var(--space-3) var(--space-4)', borderBottom: '1px solid var(--border-subtle)',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                }}>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>{d.customer_name}</div>
+                    <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>
+                      {d.dispatch_code} · {fmtQty(d.quantity)} pcs · {fmtDate(d.dispatch_date)}
+                    </div>
+                  </div>
+                  <StatusBadge status={d.status} />
+                </div>
+              ))}
+              {(!data?.recent_dispatches || data.recent_dispatches.length === 0) && (
+                <div style={{ padding: 'var(--space-4)', textAlign: 'center', color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)' }}>
+                  No recent dispatches recorded.
+                </div>
+              )}
+            </div>
           </div>
-
-          {/* Quick Actions (Dense) */}
-          <div className="section">
-             <h2 className="section-title" style={{ marginBottom: 12, fontSize: 13, textTransform: 'uppercase', color: 'var(--color-text-muted)' }}>Quick Actions</h2>
-             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <button className="btn btn-secondary btn-sm" onClick={() => navigate('/purchases')}>+ Purchase</button>
-                <button className="btn btn-secondary btn-sm" onClick={() => navigate('/dispatch')}>+ Dispatch</button>
-                <button className="btn btn-secondary btn-sm" onClick={() => navigate('/payments')}>+ Payment</button>
-                <button className="btn btn-secondary btn-sm" onClick={() => navigate('/customers')}>+ Party</button>
-             </div>
-          </div>
-          
         </div>
+
       </div>
     </div>
   );
