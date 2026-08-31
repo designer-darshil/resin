@@ -104,45 +104,46 @@ export default function CustomerDetail() {
         </>}
       />
 
-      {/* Info Cards */}
-      <div className="grid-2" style={{ marginBottom: 20 }}>
-        <div className="card">
-          <div className="card-body">
-            <div className="detail-field">
-              <div className="detail-field-label">Contact Person</div>
-              <div className="detail-field-value">{customer.contact_person || '—'}</div>
+      {/* Info Cards (Document Style) */}
+      <div className="detail-grid" style={{ marginBottom: 24 }}>
+        <div className="detail-section">
+          <h2 className="detail-section-title">Customer Information</h2>
+          <div className="grid-2" style={{ gap: 24, alignItems: 'start' }}>
+            <div>
+              <div className="detail-field">
+                <div className="detail-field-label">Contact Person</div>
+                <div className="detail-field-value">{customer.contact_person || '—'}</div>
+              </div>
+              <div className="detail-field">
+                <div className="detail-field-label">Phone</div>
+                <div className="detail-field-value">{customer.phone || '—'}</div>
+              </div>
+              <div className="detail-field">
+                <div className="detail-field-label">WhatsApp</div>
+                <div className="detail-field-value">{customer.whatsapp_number || '—'}</div>
+              </div>
+              <div className="detail-field">
+                <div className="detail-field-label">Email</div>
+                <div className="detail-field-value">{customer.email || '—'}</div>
+              </div>
             </div>
-            <div className="detail-field">
-              <div className="detail-field-label">Phone</div>
-              <div className="detail-field-value">{customer.phone || '—'}</div>
-            </div>
-            <div className="detail-field">
-              <div className="detail-field-label">WhatsApp</div>
-              <div className="detail-field-value">{customer.whatsapp_number || '—'}</div>
-            </div>
-            <div className="detail-field">
-              <div className="detail-field-label">Email</div>
-              <div className="detail-field-value">{customer.email || '—'}</div>
-            </div>
-          </div>
-        </div>
-        <div className="card">
-          <div className="card-body">
-            <div className="detail-field">
-              <div className="detail-field-label">Address</div>
-              <div className="detail-field-value">{customer.address || '—'}</div>
-            </div>
-            <div className="detail-field">
-              <div className="detail-field-label">GST Number</div>
-              <div className="detail-field-value">{customer.gst_number || '—'}</div>
-            </div>
-            <div className="detail-field">
-              <div className="detail-field-label">Opening Balance</div>
-              <div className="detail-field-value">{fmtCurrency(customer.opening_balance)}</div>
-            </div>
-            <div className="detail-field">
-              <div className="detail-field-label">Total Paid</div>
-              <div className="detail-field-value text-success">{fmtCurrency(customer.total_paid)}</div>
+            <div>
+              <div className="detail-field">
+                <div className="detail-field-label">Address</div>
+                <div className="detail-field-value">{customer.address || '—'}</div>
+              </div>
+              <div className="detail-field">
+                <div className="detail-field-label">GST Number</div>
+                <div className="detail-field-value">{customer.gst_number || '—'}</div>
+              </div>
+              <div className="detail-field">
+                <div className="detail-field-label">Opening Balance</div>
+                <div className="detail-field-value">{fmtCurrency(customer.opening_balance)}</div>
+              </div>
+              <div className="detail-field">
+                <div className="detail-field-label">Total Paid</div>
+                <div className="detail-field-value text-success">{fmtCurrency(customer.total_paid)}</div>
+              </div>
             </div>
           </div>
         </div>

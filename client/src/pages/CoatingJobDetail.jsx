@@ -120,100 +120,100 @@ export default function CoatingJobDetail() {
         </>}
       />
 
-      {/* Job Summary */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 12, marginBottom: 20 }}>
-        {[
-          { label: 'Input', value: fmtQty(job.input_quantity), color: '' },
-          { label: 'Completed', value: fmtQty(job.completed_quantity), color: 'var(--color-success)' },
-          { label: 'Rejected', value: fmtQty(job.rejected_quantity), color: 'var(--color-error)' },
-          { label: 'Remaining', value: fmtQty(remaining), color: 'var(--color-warning)' },
-        ].map(({ label, value, color }) => (
-          <div key={label} className="stat-card">
-            <div className="stat-card-label">{label}</div>
-            <div className="stat-card-value" style={{ color: color || 'inherit', fontSize: 22 }}>{value}</div>
-            <div className="stat-card-sub">pieces</div>
-          </div>
-        ))}
-        <div className="stat-card">
-          <div className="stat-card-label">Status</div>
-          <div style={{ marginTop: 4 }}><StatusBadge status={job.job_status} /></div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card-label">Quality</div>
-          <div style={{ marginTop: 4 }}><StatusBadge status={job.quality_status || 'pending'} /></div>
-        </div>
-      </div>
-
-      {/* Progress bar */}
-      {job.input_quantity > 0 && (
-        <div className="card" style={{ marginBottom: 20 }}>
-          <div className="card-body" style={{ padding: '12px 16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 13 }}>
-              <span>Production Progress</span>
-              <span style={{ fontWeight: 600 }}>{Math.round((job.completed_quantity / job.input_quantity) * 100)}%</span>
+      <div className="detail-grid">
+        {/* Job Details Section */}
+        <div className="detail-section">
+          <h2 className="detail-section-title">Job Details</h2>
+          <div className="grid-2" style={{ gap: 24, alignItems: 'start' }}>
+            <div>
+              {[
+                ['Customer', job.customer_name || '—'],
+                ['Status', <StatusBadge key="status" status={job.job_status} />],
+                ['Quality', <StatusBadge key="quality" status={job.quality_status || 'pending'} />],
+                ['Diamond Type', job.diamond_type],
+                ['Shape', job.shape],
+                ['Size', job.size],
+                ['Color', job.color],
+                ['Clarity', job.clarity],
+                ['Input Weight', job.input_weight ? `${job.input_weight} ct` : null],
+                ['Coating Type', job.coating_type],
+                ['Coating Date', fmtDate(job.coating_date)],
+                ['Expected Completion', fmtDate(job.expected_completion)],
+              ].filter(([_, v]) => v).map(([label, value]) => (
+                <div key={label} className="detail-field">
+                  <div className="detail-field-label">{label}</div>
+                  <div className="detail-field-value">{value}</div>
+                </div>
+              ))}
+              {job.notes && (
+                <div className="detail-field">
+                  <div className="detail-field-label">Notes</div>
+                  <div className="detail-field-value">{job.notes}</div>
+                </div>
+              )}
             </div>
-            <div style={{ background: 'var(--color-bg-secondary)', height: 8, borderRadius: 4, overflow: 'hidden' }}>
-              <div style={{
-                background: 'var(--color-success)', height: '100%',
-                width: `${Math.min(100, (job.completed_quantity / job.input_quantity) * 100)}%`,
-                borderRadius: 4, transition: 'width 0.3s ease'
-              }} />
-            </div>
-          </div>
-        </div>
-      )}
 
-      <div className="grid-2">
-        {/* Job Details */}
-        <div className="card">
-          <div className="card-header"><h3>Job Details</h3></div>
-          <div className="card-body">
-            {[
-              ['Diamond Type', job.diamond_type],
-              ['Shape', job.shape],
-              ['Size', job.size],
-              ['Color', job.color],
-              ['Clarity', job.clarity],
-              ['Input Weight', job.input_weight ? `${job.input_weight} ct` : null],
-              ['Coating Type', job.coating_type],
-              ['Coating Date', fmtDate(job.coating_date)],
-              ['Expected Completion', fmtDate(job.expected_completion)],
-            ].filter(([_, v]) => v).map(([label, value]) => (
-              <div key={label} className="detail-field">
-                <div className="detail-field-label">{label}</div>
-                <div className="detail-field-value">{value || '—'}</div>
-              </div>
-            ))}
-            {job.notes && (
+            <div>
+              <h3 className="detail-section-title" style={{ marginTop: 0 }}>Quantities</h3>
               <div className="detail-field">
-                <div className="detail-field-label">Notes</div>
-                <div className="detail-field-value">{job.notes}</div>
+                 <div className="detail-field-label">Input</div>
+                 <div className="detail-field-value">{fmtQty(job.input_quantity)} pcs</div>
               </div>
-            )}
+              <div className="detail-field">
+                 <div className="detail-field-label">Completed</div>
+                 <div className="detail-field-value" style={{ color: 'var(--color-success)' }}>{fmtQty(job.completed_quantity)} pcs</div>
+              </div>
+              <div className="detail-field">
+                 <div className="detail-field-label">Rejected</div>
+                 <div className="detail-field-value" style={{ color: 'var(--color-error)' }}>{fmtQty(job.rejected_quantity)} pcs</div>
+              </div>
+              <div className="detail-field">
+                 <div className="detail-field-label">Remaining</div>
+                 <div className="detail-field-value" style={{ color: 'var(--color-warning)' }}>{fmtQty(remaining)} pcs</div>
+              </div>
+              
+              {/* Progress bar */}
+              {job.input_quantity > 0 && (
+                <div style={{ marginTop: 24 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 13 }}>
+                    <span>Production Progress</span>
+                    <span style={{ fontWeight: 600 }}>{Math.round((job.completed_quantity / job.input_quantity) * 100)}%</span>
+                  </div>
+                  <div style={{ background: 'var(--color-bg-secondary)', height: 8, borderRadius: 4, overflow: 'hidden' }}>
+                    <div style={{
+                      background: 'var(--color-success)', height: '100%',
+                      width: `${Math.min(100, (job.completed_quantity / job.input_quantity) * 100)}%`,
+                      borderRadius: 4, transition: 'width 0.3s ease'
+                    }} />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Assignments */}
-        <div className="card">
-          <div className="card-header">
-            <h3>Assigned Employees</h3>
+        {/* Assignments Section */}
+        <div className="detail-section">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--color-border-strong)', paddingBottom: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
+            <h2 className="detail-section-title" style={{ borderBottom: 'none', margin: 0, padding: 0 }}>Assigned Employees</h2>
             {canEdit && (
               <button className="btn btn-secondary btn-sm" onClick={() => { loadEmployees(); setShowAssignModal(true); }}>+ Assign</button>
             )}
           </div>
-          <div className="card-body">
+          <div>
             {job.assignments?.length === 0 && (
               <p className="text-muted text-sm">No employees assigned yet.</p>
             )}
             {job.assignments?.map(a => (
-              <div key={a.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 12, padding: 12, background: 'var(--color-bg)', borderRadius: 8 }}>
+              <div key={a.id} style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 8, paddingBottom: 8, borderBottom: '1px dashed var(--color-border)' }}>
                 <Avatar name={a.employee_name} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, fontSize: 14 }}>{a.employee_name}</div>
-                  <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{a.employee_code}</div>
-                  <div style={{ display: 'flex', gap: 12, marginTop: 4, fontSize: 12 }}>
-                    <span>✅ {fmtQty(a.completed_quantity)} done</span>
-                    <span>❌ {fmtQty(a.rejected_quantity)} rejected</span>
+                <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>{a.employee_name} <span style={{ fontSize: 12, color: 'var(--color-text-muted)', fontWeight: 400 }}>({a.employee_code})</span></div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 12, fontSize: 12 }}>
+                    <span style={{ color: 'var(--color-success)' }}>✅ {fmtQty(a.completed_quantity)}</span>
+                    <span style={{ color: 'var(--color-error)' }}>❌ {fmtQty(a.rejected_quantity)}</span>
                   </div>
                 </div>
               </div>
@@ -224,25 +224,27 @@ export default function CoatingJobDetail() {
 
       {/* Quality Checks */}
       {job.quality_checks?.length > 0 && (
-        <div className="card" style={{ marginTop: 20 }}>
-          <div className="card-header"><h3>Quality Check History</h3></div>
-          <table className="data-table">
-            <thead>
-              <tr><th>Date</th><th>Passed</th><th>Failed</th><th>Status</th><th>Checked By</th><th>Notes</th></tr>
-            </thead>
-            <tbody>
-              {job.quality_checks.map(qc => (
-                <tr key={qc.id}>
-                  <td>{fmtDate(qc.check_date)}</td>
-                  <td style={{ color: 'var(--color-success)', fontWeight: 600 }}>{fmtQty(qc.passed_quantity)}</td>
-                  <td style={{ color: 'var(--color-error)' }}>{fmtQty(qc.failed_quantity)}</td>
-                  <td><StatusBadge status={qc.status} /></td>
-                  <td>{qc.checked_by_name || '—'}</td>
-                  <td className="text-muted">{qc.notes || '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="detail-section" style={{ marginTop: 24 }}>
+          <h2 className="detail-section-title">Quality Check History</h2>
+          <div className="table-wrapper">
+            <table className="data-table">
+              <thead>
+                <tr><th>Date</th><th>Passed</th><th>Failed</th><th>Status</th><th>Checked By</th><th>Notes</th></tr>
+              </thead>
+              <tbody>
+                {job.quality_checks.map(qc => (
+                  <tr key={qc.id}>
+                    <td>{fmtDate(qc.check_date)}</td>
+                    <td style={{ color: 'var(--color-success)', fontWeight: 600 }}>{fmtQty(qc.passed_quantity)}</td>
+                    <td style={{ color: 'var(--color-error)' }}>{fmtQty(qc.failed_quantity)}</td>
+                    <td><StatusBadge status={qc.status} /></td>
+                    <td>{qc.checked_by_name || '—'}</td>
+                    <td className="text-muted">{qc.notes || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
