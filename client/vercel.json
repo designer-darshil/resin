@@ -1,12 +1,23 @@
 {
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/:path*",
-      "destination": "/api/:path*"
+      "src": "^/api/auth/login$",
+      "dest": "/api/auth/login.js"
     },
     {
-      "source": "/:path*",
-      "destination": "/index.html"
+      "src": "^/api/auth/me$",
+      "dest": "/api/auth/me.js"
+    },
+    {
+      "src": "^/api/(.*)$",
+      "dest": "/api/$1.js"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "^/(.*)$",
+      "dest": "/index.html"
     }
   ]
 }
