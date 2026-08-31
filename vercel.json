@@ -1,25 +1,45 @@
 {
-  "buildCommand": "npm --prefix client install && npm --prefix client run build",
-  "outputDirectory": "client/dist",
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "client/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
   "routes": [
     {
-      "src": "^/api/auth/login$",
+      "src": "/api/auth/login",
       "dest": "/api/auth/login.js"
     },
     {
-      "src": "^/api/auth/me$",
+      "src": "/api/auth/me",
       "dest": "/api/auth/me.js"
     },
     {
-      "src": "^/api/(.*)$",
+      "src": "/api/auth/logout",
+      "dest": "/api/auth/logout.js"
+    },
+    {
+      "src": "/api/health",
+      "dest": "/api/health.js"
+    },
+    {
+      "src": "/api/(.*)",
       "dest": "/api/$1.js"
     },
     {
       "handle": "filesystem"
     },
     {
-      "src": "^/(.*)$",
-      "dest": "/index.html"
+      "src": "/(.*)",
+      "dest": "/client/$1"
     }
   ]
 }
