@@ -98,7 +98,7 @@ export default function EmployeeDetail() {
       </div>
 
       <div className="tabs">
-        {['profile','jobs','overtime','advances'].map(t => (
+        {['profile','jobs','overtime','advances','salary'].map(t => (
           <button key={t} className={`tab ${activeTab === t ? 'active' : ''}`} onClick={() => setActiveTab(t)}>
             {t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
@@ -191,6 +191,24 @@ export default function EmployeeDetail() {
               <div className="data-card-row"><span className="data-card-label">Amount</span><span>{fmtCurrency(a.amount)}</span></div>
               <div className="data-card-row"><span className="data-card-label">Remaining</span><span className="text-warning font-semibold">{fmtCurrency(a.remaining_balance)}</span></div>
               <div className="data-card-row"><span className="data-card-label">Reason</span><span>{a.reason || '—'}</span></div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {activeTab === 'salary' && (
+        <div>
+          {employee.salary?.length === 0 && <p className="text-muted">No salary records.</p>}
+          {employee.salary?.map(s => (
+            <div key={s.id} className="data-card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span className="font-semibold">{s.period_month}/{s.period_year}</span>
+                <StatusBadge status={s.payment_status} />
+              </div>
+              <div className="data-card-row"><span className="data-card-label">Base</span><span>{fmtCurrency(s.base_salary)}</span></div>
+              <div className="data-card-row"><span className="data-card-label">Overtime</span><span className="text-success">+{fmtCurrency(s.overtime_amount)}</span></div>
+              <div className="data-card-row"><span className="data-card-label">Deductions</span><span className="text-error">-{fmtCurrency(s.advance_deducted + s.other_deductions)}</span></div>
+              <div className="data-card-row"><span className="data-card-label">Net Payable</span><span className="font-semibold">{fmtCurrency(s.net_payable)}</span></div>
             </div>
           ))}
         </div>

@@ -16,12 +16,20 @@ export default function CustomerDetail() {
   const [activeTab, setActiveTab] = useState('overview');
   const [showEditModal, setShowEditModal] = useState(false);
   const [showPayModal, setShowPayModal] = useState(false);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [templates, setTemplates] = useState([]);
+  const [selectedTemplate, setSelectedTemplate] = useState('');
+  const [customMessage, setCustomMessage] = useState('');
   const [form, setForm] = useState({});
   const [payForm, setPayForm] = useState({ amount: '', payment_method: 'cash', payment_date: new Date().toISOString().split('T')[0], notes: '', reference_number: '' });
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
     try {
+      const res = await fetch('/api/whatsapp/templates', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
+      const tmplData = await res.json();
+      if (tmplData.data) setTemplates(tmplData.data);
+      
       const data = await customersApi.get(id);
       setCustomer(data);
       setForm({
@@ -40,6 +48,32 @@ export default function CustomerDetail() {
   };
 
   useEffect(() => { load(); }, [id]);
+
+  const handleSendWhatsApp = () => {
+    if (!customMessage.trim()) { toast.error('Enter a message'); return; }
+    const num = customer.whatsapp_number.replace(/[^0-9]/g, '');
+    const fullNum = num.startsWith('91') ? num : `91${num}`;
+    window.open(`https://wa.me/${fullNum}?text=${encodeURIComponent(customMessage)}`, '_blank');
+    setShowWhatsAppModal(false);
+    setCustomMessage('');
+    setSelectedTemplate('');
+  };
+
+  const handleTemplateSelect = (e) => {
+    const tmplId = e.target.value;
+    setSelectedTemplate(tmplId);
+    if (tmplId) {
+      const tmpl = templates.find(t => t.id === parseInt(tmplId));
+      if (tmpl) {
+        let text = tmpl.message_template;
+        text = text.replace(/\{customer_name\}/g, customer.company_name);
+        // Replace other vars with placeholders if any
+        setCustomMessage(text);
+      }
+    } else {
+      setCustomMessage('');
+    }
+  };
 
   const handleEdit = async (e) => {
     e.preventDefault();
@@ -83,7 +117,7 @@ export default function CustomerDetail() {
   return (
     <div className="page">
       <div className="breadcrumb">
-        <Link to="/customers">Customers</Link>
+        <Link to="/customers">Parties</Link>
         <span className="breadcrumb-sep">›</span>
         <span className="breadcrumb-current">{customer.company_name}</span>
       </div>
@@ -99,7 +133,7 @@ export default function CustomerDetail() {
             <button className="btn btn-primary" onClick={() => setShowPayModal(true)}>+ Payment</button>
           )}
           {customer.whatsapp_number && (
-            <WhatsAppButton phone={customer.whatsapp_number} message={whatsAppMsg} label="WhatsApp" />
+            <button className="btn btn-whatsapp" onClick={() => setShowWhatsAppModal(true)}>📱 WhatsApp Message</button>
           )}
         </>}
       />
@@ -107,7 +141,7 @@ export default function CustomerDetail() {
       {/* Info Cards (Document Style) */}
       <div className="detail-grid" style={{ marginBottom: 24 }}>
         <div className="detail-section">
-          <h2 className="detail-section-title">Customer Information</h2>
+          <h2 className="detail-section-title">Party Information</h2>
           <div className="grid-2" style={{ gap: 24, alignItems: 'start' }}>
             <div>
               <div className="detail-field">
@@ -234,7 +268,7 @@ export default function CustomerDetail() {
       )}
 
       {/* Edit Modal */}
-      <Modal open={showEditModal} onClose={() => setShowEditModal(false)} title="Edit Customer"
+      <Modal open={showEditModal} onClose={() => setShowEditModal(false)} title="Edit Party"
         footer={<>
           <button className="btn btn-secondary" onClick={() => setShowEditModal(false)}>Cancel</button>
           <button className="btn btn-primary" onClick={handleEdit} disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
@@ -303,6 +337,28 @@ export default function CustomerDetail() {
         <div className="form-group">
           <label className="form-label">Notes</label>
           <textarea className="form-control" rows="2" value={payForm.notes} onChange={e => setPayForm(f => ({ ...f, notes: e.target.value }))} />
+        </div>
+      </Modal>
+
+      {/* Inline WhatsApp Modal */}
+      <Modal open={showWhatsAppModal} onClose={() => setShowWhatsAppModal(false)} title={`Message ${customer?.company_name}`}
+        footer={<>
+          <button className="btn btn-secondary" onClick={() => setShowWhatsAppModal(false)}>Cancel</button>
+          <button className="btn btn-whatsapp" onClick={handleSendWhatsApp}>Open WhatsApp</button>
+        </>}>
+        <div className="form-group">
+          <label className="form-label">Template (Optional)</label>
+          <select className="form-control" value={selectedTemplate} onChange={handleTemplateSelect}>
+            <option value="">No template (write custom message)</option>
+            {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+        </div>
+        <div className="form-group">
+          <label className="form-label">Message Content</label>
+          <textarea className="form-control" rows="8" value={customMessage} onChange={e => setCustomMessage(e.target.value)} placeholder="Type your message here..." />
+        </div>
+        <div className="info-box">
+          This will open WhatsApp Web or Desktop with the pre-filled message to {customer?.whatsapp_number}.
         </div>
       </Modal>
     </div>

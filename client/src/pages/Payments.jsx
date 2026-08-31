@@ -87,7 +87,7 @@ export default function PaymentsPage() {
       <div className="toolbar">
         <div className="search-input-wrap">
           <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input className="search-input" placeholder="Search customer, reference…" onChange={e => debouncedSearch(e.target.value)} />
+          <input className="search-input" placeholder="Search party, reference…" onChange={e => debouncedSearch(e.target.value)} />
         </div>
         <select className="filter-select" value={directionFilter} onChange={e => { setDirectionFilter(e.target.value); setPage(1); }}>
           <option value="">All Payments</option>
@@ -102,7 +102,7 @@ export default function PaymentsPage() {
             <tr>
               <th>Code</th>
               <th>Direction</th>
-              <th>Customer</th>
+              <th>Party</th>
               <th>Amount</th>
               <th>Date</th>
               <th>Method</th>
@@ -144,7 +144,7 @@ export default function PaymentsPage() {
           <div key={r.id} className="data-card" style={{ borderLeft: `3px solid ${r.payment_direction === 'received' ? 'var(--color-success)' : 'var(--color-error)'}` }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
               <div>
-                <div className="data-card-title">{r.customer_name || 'No customer'}</div>
+                <div className="data-card-title">{r.customer_name || 'No party'}</div>
                 <div className="text-sm text-muted">{r.payment_code}</div>
               </div>
               <div style={{ textAlign: 'right' }}>
@@ -171,12 +171,12 @@ export default function PaymentsPage() {
           <div className="form-group">
             <label className="form-label">Direction</label>
             <select className="form-control" value={form.payment_direction} onChange={e => set('payment_direction', e.target.value)}>
-              <option value="received">💰 Received from Customer</option>
+              <option value="received">💰 Received from Party</option>
               <option value="paid">💸 Paid to Supplier</option>
             </select>
           </div>
           <div className="form-group">
-            <label className="form-label">Customer / Party</label>
+            <label className="form-label">Party</label>
             <select className="form-control" value={form.customer_id} onChange={e => set('customer_id', e.target.value)}>
               <option value="">No party / direct</option>
               {customers.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}

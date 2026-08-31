@@ -24,6 +24,7 @@ export default function CoatingJobsPage() {
   });
   const [selectedStock, setSelectedStock] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [step, setStep] = useState(1);
   const toast = useToast();
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
@@ -52,6 +53,7 @@ export default function CoatingJobsPage() {
     ]);
     setCustomers(custRes.data);
     setStockItems(stockRes.data.filter(s => s.raw_quantity > 0));
+    setStep(1);
     setShowModal(true);
   };
 
@@ -106,7 +108,7 @@ export default function CoatingJobsPage() {
       <div className="toolbar">
         <div className="search-input-wrap">
           <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input className="search-input" placeholder="Search job code, customer…" onChange={e => debouncedSearch(e.target.value)} />
+          <input className="search-input" placeholder="Search job code, party…" onChange={e => debouncedSearch(e.target.value)} />
         </div>
         <select className="filter-select" value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}>
           <option value="">All Status</option>
@@ -120,7 +122,7 @@ export default function CoatingJobsPage() {
           <thead>
             <tr>
               <th>Job Code</th>
-              <th>Customer</th>
+              <th>Party</th>
               <th>Diamond</th>
               <th>Input</th>
               <th>Done</th>
@@ -171,7 +173,7 @@ export default function CoatingJobsPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
               <div>
                 <div className="data-card-title">{j.job_code}</div>
-                <div className="text-sm text-muted">{j.customer_name || 'No customer'}</div>
+                <div className="text-sm text-muted">{j.customer_name || 'No party'}</div>
               </div>
               <StatusBadge status={j.job_status} />
             </div>
@@ -200,82 +202,102 @@ export default function CoatingJobsPage() {
         <Pagination page={page} total={total} limit={50} onPageChange={setPage} />
       </div>
 
-      {/* Create Job Modal */}
-      <Modal open={showModal} onClose={() => setShowModal(false)} title="New Coating Job" size="large"
+      {/* Create Job Modal (Wizard) */}
+      <Modal open={showModal} onClose={() => setShowModal(false)} title={`New Coating Job — Step ${step} of 3`} size="large"
         footer={<>
           <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Creating…' : 'Create Job'}</button>
+          {step > 1 && <button className="btn btn-secondary" onClick={() => setStep(step - 1)}>Back</button>}
+          {step < 3 && <button className="btn btn-primary" onClick={() => setStep(step + 1)}>Next Step</button>}
+          {step === 3 && <button className="btn btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Creating…' : 'Create Job'}</button>}
         </>}>
-        <form onSubmit={handleSave}>
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Customer</label>
-              <select className="form-control" value={form.customer_id} onChange={e => set('customer_id', e.target.value)}>
-                <option value="">Select customer…</option>
-                {customers.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Coating Type</label>
-              <select className="form-control" value={form.coating_type} onChange={e => set('coating_type', e.target.value)}>
-                {['Standard Resin','Premium Resin','UV Resin','Epoxy Resin','Custom'].map(t => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </div>
-          </div>
+        <div style={{ marginBottom: 20 }}>
+           <div style={{ display: 'flex', gap: 4, height: 4, background: 'var(--color-bg)' }}>
+             <div style={{ flex: 1, background: step >= 1 ? 'var(--color-primary)' : 'var(--color-border)', borderRadius: 2 }} />
+             <div style={{ flex: 1, background: step >= 2 ? 'var(--color-primary)' : 'var(--color-border)', borderRadius: 2 }} />
+             <div style={{ flex: 1, background: step >= 3 ? 'var(--color-primary)' : 'var(--color-border)', borderRadius: 2 }} />
+           </div>
+        </div>
 
-          <div className="form-group">
-            <label className="form-label">Source Stock</label>
-            <select className="form-control" value={selectedStock?.id || ''} onChange={e => handleStockSelect(e.target.value)}>
-              <option value="">No stock selected (manual entry)</option>
-              {stockItems.map(s => (
-                <option key={s.id} value={s.id}>
-                  {s.purchase_code} — {s.shape} {s.diamond_type} — Available: {fmtQty(s.raw_quantity)} pcs
-                </option>
-              ))}
-            </select>
-            {selectedStock && (
-              <div className="info-box" style={{ marginTop: 8 }}>
-                Selected: {selectedStock.shape} {selectedStock.diamond_type} | Available raw stock: <strong>{fmtQty(selectedStock.raw_quantity)} pcs</strong>
+        <form onSubmit={e => e.preventDefault()}>
+          {step === 1 && (
+            <>
+              <div className="form-group">
+                <label className="form-label">Party</label>
+                <select className="form-control" value={form.customer_id} onChange={e => set('customer_id', e.target.value)}>
+                  <option value="">Select party…</option>
+                  {customers.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
+                </select>
               </div>
-            )}
-          </div>
+              <div className="form-group">
+                <label className="form-label">Source Stock</label>
+                <select className="form-control" value={selectedStock?.id || ''} onChange={e => handleStockSelect(e.target.value)}>
+                  <option value="">No stock selected (manual entry)</option>
+                  {stockItems.map(s => (
+                    <option key={s.id} value={s.id}>
+                      {s.purchase_code} — {s.shape} {s.diamond_type} — Available: {fmtQty(s.raw_quantity)} pcs
+                    </option>
+                  ))}
+                </select>
+                {selectedStock && (
+                  <div className="info-box" style={{ marginTop: 8 }}>
+                    Selected: {selectedStock.shape} {selectedStock.diamond_type} | Available raw stock: <strong>{fmtQty(selectedStock.raw_quantity)} pcs</strong>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
 
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Input Quantity (pcs) <span className="required">*</span></label>
-              <input
-                className="form-control"
-                type="number"
-                inputMode="numeric"
-                value={form.input_quantity}
-                onChange={e => set('input_quantity', e.target.value)}
-                max={selectedStock ? selectedStock.raw_quantity : undefined}
-                placeholder={selectedStock ? `Max: ${selectedStock.raw_quantity}` : 'Enter quantity'}
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Input Weight (ct)</label>
-              <input className="form-control" type="number" step="0.001" value={form.input_weight} onChange={e => set('input_weight', e.target.value)} placeholder="Optional" />
-            </div>
-          </div>
+          {step === 2 && (
+            <>
+              <div className="form-group">
+                <label className="form-label">Coating Type</label>
+                <select className="form-control" value={form.coating_type} onChange={e => set('coating_type', e.target.value)}>
+                  {['Standard Resin','Premium Resin','UV Resin','Epoxy Resin','Custom'].map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Input Quantity (pcs) <span className="required">*</span></label>
+                  <input
+                    className="form-control"
+                    type="number"
+                    inputMode="numeric"
+                    value={form.input_quantity}
+                    onChange={e => set('input_quantity', e.target.value)}
+                    max={selectedStock ? selectedStock.raw_quantity : undefined}
+                    placeholder={selectedStock ? `Max: ${selectedStock.raw_quantity}` : 'Enter quantity'}
+                    autoFocus
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Input Weight (ct)</label>
+                  <input className="form-control" type="number" step="0.001" value={form.input_weight} onChange={e => set('input_weight', e.target.value)} placeholder="Optional" />
+                </div>
+              </div>
+            </>
+          )}
 
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Coating Date</label>
-              <input className="form-control" type="date" value={form.coating_date} onChange={e => set('coating_date', e.target.value)} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Expected Completion</label>
-              <input className="form-control" type="date" value={form.expected_completion} onChange={e => set('expected_completion', e.target.value)} />
-            </div>
-          </div>
+          {step === 3 && (
+            <>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Coating Date</label>
+                  <input className="form-control" type="date" value={form.coating_date} onChange={e => set('coating_date', e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Expected Completion</label>
+                  <input className="form-control" type="date" value={form.expected_completion} onChange={e => set('expected_completion', e.target.value)} />
+                </div>
+              </div>
 
-          <div className="form-group">
-            <label className="form-label">Notes</label>
-            <textarea className="form-control" rows="2" value={form.notes} onChange={e => set('notes', e.target.value)} />
-          </div>
+              <div className="form-group">
+                <label className="form-label">Notes</label>
+                <textarea className="form-control" rows="3" value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Any special instructions for this job" />
+              </div>
+            </>
+          )}
         </form>
       </Modal>
     </div>

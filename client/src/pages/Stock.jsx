@@ -49,6 +49,11 @@ export default function StockPage() {
     adjustment: '🔧 Adjustment',
   };
 
+  const rawStock = stock.filter(s => s.raw_quantity > 0);
+  const coatingStock = stock.filter(s => s.in_coating_quantity > 0);
+  const finishedStock = stock.filter(s => s.finished_quantity > 0);
+  const dispatchedStock = stock.filter(s => s.dispatched_quantity > 0);
+
   return (
     <div className="page">
       <PageHeader title="Stock Management" subtitle="Live inventory across all stages" />
@@ -75,69 +80,139 @@ export default function StockPage() {
             </div>
           </div>
 
-          <div className="table-wrapper">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Purchase</th>
-                  <th>Type</th>
-                  <th>Shape</th>
-                  <th>Size</th>
-                  <th>Color</th>
-                  <th>Supplier</th>
-                  <th>Raw</th>
-                  <th>In Coating</th>
-                  <th>Finished</th>
-                  <th>Rejected</th>
-                  <th>Dispatched</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? <LoadingRows cols={11} rows={5} /> : stock.map(s => (
-                  <tr key={s.id}>
-                    <td><span className="tag">{s.purchase_code || '—'}</span></td>
-                    <td>{s.diamond_type || '—'}</td>
-                    <td>{s.shape || '—'}</td>
-                    <td>{s.size || '—'}</td>
-                    <td>{s.color || '—'}</td>
-                    <td className="text-muted text-sm">{s.supplier_name || '—'}</td>
-                    <td style={{ fontWeight: 600 }}>{fmtQty(s.raw_quantity)}</td>
-                    <td style={{ color: 'var(--color-accent)', fontWeight: 600 }}>{fmtQty(s.in_coating_quantity)}</td>
-                    <td style={{ color: 'var(--color-success)', fontWeight: 600 }}>{fmtQty(s.finished_quantity)}</td>
-                    <td style={{ color: 'var(--color-error)' }}>{fmtQty(s.rejected_quantity)}</td>
-                    <td style={{ color: 'var(--color-text-muted)' }}>{fmtQty(s.dispatched_quantity)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {!loading && stock.length === 0 && (
-              <div style={{ padding: 40, textAlign: 'center', color: 'var(--color-text-muted)' }}>
-                <p>No stock records. Create a purchase and receive stock to see it here.</p>
-              </div>
-            )}
-          </div>
-
-          <div className="data-cards">
-            {loading ? <LoadingCards /> : stock.map(s => (
-              <div key={s.id} className="data-card">
-                <div className="data-card-title">{s.diamond_type || 'Diamond'} — {s.shape}</div>
-                <div style={{ marginBottom: 4 }}><span className="tag">{s.purchase_code}</span></div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
-                  {[
-                    { label: 'Raw', value: s.raw_quantity, color: '' },
-                    { label: 'In Coating', value: s.in_coating_quantity, color: 'var(--color-accent)' },
-                    { label: 'Finished', value: s.finished_quantity, color: 'var(--color-success)' },
-                    { label: 'Rejected', value: s.rejected_quantity, color: 'var(--color-error)' },
-                  ].map(({ label, value, color }) => (
-                    <div key={label} style={{ background: 'var(--color-bg)', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--color-border)' }}>
-                      <div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginBottom: 2 }}>{label}</div>
-                      <div style={{ fontSize: 18, fontWeight: 700, color: color || 'var(--color-text-primary)' }}>{fmtQty(value)}</div>
-                    </div>
-                  ))}
+          {loading ? <LoadingRows cols={5} rows={3} /> : stock.length === 0 ? (
+            <div style={{ padding: 40, textAlign: 'center', color: 'var(--color-text-muted)' }}>
+              <p>No stock records. Create a purchase and receive stock to see it here.</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+              
+              {/* Section: Available (Raw) */}
+              <div className="section">
+                <div className="section-header">
+                  <h2 className="section-title">Available for Coating (Raw)</h2>
+                </div>
+                <div className="table-wrapper">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Purchase Code</th>
+                        <th>Supplier</th>
+                        <th>Diamond Details</th>
+                        <th style={{ textAlign: 'right' }}>Qty Available</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rawStock.length === 0 ? (
+                        <tr><td colSpan="4" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-muted)' }}>No raw stock available</td></tr>
+                      ) : rawStock.map(s => (
+                        <tr key={`raw-${s.id}`}>
+                          <td><span className="tag">{s.purchase_code || '—'}</span></td>
+                          <td>{s.supplier_name || '—'}</td>
+                          <td>{`${s.shape || ''} ${s.diamond_type || ''} ${s.size ? `(${s.size})` : ''}`}</td>
+                          <td style={{ textAlign: 'right', fontWeight: 700 }}>{fmtQty(s.raw_quantity)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-            ))}
-          </div>
+
+              {/* Section: In Coating */}
+              <div className="section">
+                <div className="section-header">
+                  <h2 className="section-title" style={{ color: 'var(--color-accent)' }}>Currently In Coating</h2>
+                </div>
+                <div className="table-wrapper">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Purchase Code</th>
+                        <th>Supplier</th>
+                        <th>Diamond Details</th>
+                        <th style={{ textAlign: 'right' }}>Qty In Coating</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {coatingStock.length === 0 ? (
+                        <tr><td colSpan="4" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-muted)' }}>No stock in coating</td></tr>
+                      ) : coatingStock.map(s => (
+                        <tr key={`coat-${s.id}`}>
+                          <td><span className="tag">{s.purchase_code || '—'}</span></td>
+                          <td>{s.supplier_name || '—'}</td>
+                          <td>{`${s.shape || ''} ${s.diamond_type || ''} ${s.size ? `(${s.size})` : ''}`}</td>
+                          <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-accent)' }}>{fmtQty(s.in_coating_quantity)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Section: Finished */}
+              <div className="section">
+                <div className="section-header">
+                  <h2 className="section-title" style={{ color: 'var(--color-success)' }}>Finished & Ready</h2>
+                </div>
+                <div className="table-wrapper">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Purchase Code</th>
+                        <th>Supplier</th>
+                        <th>Diamond Details</th>
+                        <th style={{ textAlign: 'right' }}>Qty Finished</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {finishedStock.length === 0 ? (
+                        <tr><td colSpan="4" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-muted)' }}>No finished stock</td></tr>
+                      ) : finishedStock.map(s => (
+                        <tr key={`fin-${s.id}`}>
+                          <td><span className="tag">{s.purchase_code || '—'}</span></td>
+                          <td>{s.supplier_name || '—'}</td>
+                          <td>{`${s.shape || ''} ${s.diamond_type || ''} ${s.size ? `(${s.size})` : ''}`}</td>
+                          <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-success)' }}>{fmtQty(s.finished_quantity)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              
+              {/* Section: Dispatched */}
+              <div className="section">
+                <div className="section-header">
+                  <h2 className="section-title" style={{ color: 'var(--color-text-muted)' }}>Dispatched History</h2>
+                </div>
+                <div className="table-wrapper">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Purchase Code</th>
+                        <th>Supplier</th>
+                        <th>Diamond Details</th>
+                        <th style={{ textAlign: 'right' }}>Qty Dispatched</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dispatchedStock.length === 0 ? (
+                        <tr><td colSpan="4" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-muted)' }}>No dispatched stock</td></tr>
+                      ) : dispatchedStock.map(s => (
+                        <tr key={`disp-${s.id}`}>
+                          <td><span className="tag" style={{ background: 'var(--color-border)' }}>{s.purchase_code || '—'}</span></td>
+                          <td>{s.supplier_name || '—'}</td>
+                          <td>{`${s.shape || ''} ${s.diamond_type || ''} ${s.size ? `(${s.size})` : ''}`}</td>
+                          <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-text-muted)' }}>{fmtQty(s.dispatched_quantity)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+            </div>
+          )}
         </>
       )}
 

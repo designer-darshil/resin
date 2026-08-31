@@ -96,7 +96,11 @@ router.get('/:id', authenticate, requirePermission('employees', 'can_view'), (re
     SELECT * FROM salary_advances WHERE employee_id = ? AND is_active = 1 ORDER BY advance_date DESC
   `).all(req.params.id);
 
-  res.json({ ...employee, jobs, overtime, advances });
+  const salary = db.prepare(`
+    SELECT * FROM salary_records WHERE employee_id = ? ORDER BY period_year DESC, period_month DESC LIMIT 12
+  `).all(req.params.id);
+
+  res.json({ ...employee, jobs, overtime, advances, salary });
 });
 
 // PUT /api/employees/:id

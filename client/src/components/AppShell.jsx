@@ -2,24 +2,56 @@ import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 
-const mainNav = [
-  { to: '/dashboard', label: 'Dashboard', icon: HomeIcon },
-  { to: '/purchases', label: 'Purchases', icon: PurchaseIcon, perm: 'purchases' },
-  { to: '/stock', label: 'Stock', icon: StockIcon, perm: 'stock' },
-  { to: '/coating-jobs', label: 'Coating Jobs', icon: JobIcon, perm: 'coating_jobs' },
-  { to: '/customers', label: 'Customers', icon: CustomerIcon, perm: 'customers' },
-  { to: '/dispatch', label: 'Dispatch', icon: DispatchIcon, perm: 'dispatch' },
-  { to: '/employees', label: 'Employees', icon: EmployeeIcon, perm: 'employees' },
-  { to: '/salary', label: 'Salary', icon: SalaryIcon, perm: 'salary' },
-  { to: '/whatsapp', label: 'WhatsApp', icon: WAIcon, perm: 'whatsapp' },
-  { to: '/reports', label: 'Reports', icon: ReportIcon, perm: 'reports' },
-];
-
-const secondaryNav = [
-  { to: '/payments', label: 'Payments', icon: PayIcon, perm: 'payments' },
-  { to: '/overtime', label: 'Overtime', icon: OTIcon, perm: 'overtime' },
-  { to: '/advances', label: 'Advances', icon: AdvIcon, perm: 'salary' },
-  { to: '/admin', label: 'Admin', icon: AdminIcon, adminOnly: true },
+const navGroups = [
+  {
+    label: 'HOME',
+    items: [
+      { to: '/dashboard', label: 'Dashboard', icon: HomeIcon }
+    ]
+  },
+  {
+    label: 'WORK',
+    items: [
+      { to: '/purchases', label: 'Purchases', icon: PurchaseIcon, perm: 'purchases' },
+      { to: '/stock', label: 'Stock', icon: StockIcon, perm: 'stock' },
+      { to: '/coating-jobs', label: 'Coating Jobs', icon: JobIcon, perm: 'coating_jobs' },
+      { to: '/dispatch', label: 'Dispatch', icon: DispatchIcon, perm: 'dispatch' },
+    ]
+  },
+  {
+    label: 'PEOPLE',
+    items: [
+      { to: '/customers', label: 'Parties', icon: CustomerIcon, perm: 'customers' },
+      { to: '/employees', label: 'Employees', icon: EmployeeIcon, perm: 'employees' },
+    ]
+  },
+  {
+    label: 'MONEY',
+    items: [
+      { to: '/payments', label: 'Payments', icon: PayIcon, perm: 'payments' },
+      { to: '/salary', label: 'Salary', icon: SalaryIcon, perm: 'salary' },
+      { to: '/advances', label: 'Advances', icon: AdvIcon, perm: 'salary' },
+      { to: '/overtime', label: 'Overtime', icon: OTIcon, perm: 'overtime' },
+    ]
+  },
+  {
+    label: 'REPORTS',
+    items: [
+      { to: '/reports', label: 'Reports', icon: ReportIcon, perm: 'reports' }
+    ]
+  },
+  {
+    label: 'COMMUNICATION',
+    items: [
+      { to: '/whatsapp', label: 'WhatsApp', icon: WAIcon, perm: 'whatsapp' }
+    ]
+  },
+  {
+    label: 'ADMIN',
+    items: [
+      { to: '/admin', label: 'Settings', icon: AdminIcon, adminOnly: true }
+    ]
+  }
 ];
 
 // Bottom nav (5 most important for mobile)
@@ -27,7 +59,7 @@ const bottomNav = [
   { to: '/dashboard', label: 'Home', icon: HomeIcon },
   { to: '/coating-jobs', label: 'Jobs', icon: JobIcon },
   { to: '/stock', label: 'Stock', icon: StockIcon },
-  { to: '/customers', label: 'Customers', icon: CustomerIcon },
+  { to: '/customers', label: 'Parties', icon: CustomerIcon },
   { to: '/employees', label: 'Employees', icon: EmployeeIcon },
 ];
 
@@ -35,17 +67,11 @@ export default function AppShell({ children }) {
   const { user, logout, hasPermission, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
   };
-
-  const filteredMain = mainNav.filter(n => !n.perm || hasPermission(n.perm));
-  const filteredSecondary = secondaryNav.filter(n =>
-    (!n.perm || hasPermission(n.perm)) && (!n.adminOnly || isAdmin)
-  );
 
   return (
     <div className="app-layout">
@@ -58,39 +84,34 @@ export default function AppShell({ children }) {
       <nav className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-logo">
           <h1>💎 Resin</h1>
-          <p>Diamond Coating Manager</p>
+          <p>Operations Manager</p>
         </div>
 
         <div className="sidebar-nav">
-          <div className="sidebar-section-label">Main</div>
-          {filteredMain.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
-              onClick={() => setSidebarOpen(false)}
-            >
-              <Icon className="icon" />
-              {label}
-            </NavLink>
-          ))}
+          {navGroups.map(group => {
+            const filteredItems = group.items.filter(n =>
+              (!n.perm || hasPermission(n.perm)) && (!n.adminOnly || isAdmin)
+            );
+            
+            if (filteredItems.length === 0) return null;
 
-          {filteredSecondary.length > 0 && (
-            <>
-              <div className="sidebar-section-label" style={{ marginTop: 8 }}>More</div>
-              {filteredSecondary.map(({ to, label, icon: Icon }) => (
-                <NavLink
-                  key={to}
-                  to={to}
-                  className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <Icon className="icon" />
-                  {label}
-                </NavLink>
-              ))}
-            </>
-          )}
+            return (
+              <div key={group.label} style={{ marginBottom: 16 }}>
+                <div className="sidebar-section-label">{group.label}</div>
+                {filteredItems.map(({ to, label, icon: Icon }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+                    onClick={() => setSidebarOpen(false)}
+                  >
+                    <Icon className="icon" />
+                    {label}
+                  </NavLink>
+                ))}
+              </div>
+            );
+          })}
         </div>
 
         <div className="sidebar-footer">

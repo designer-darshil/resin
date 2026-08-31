@@ -14,6 +14,7 @@ export default function DispatchPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [activeTab, setActiveTab] = useState('ready'); // 'ready' or 'history'
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [customers, setCustomers] = useState([]);
@@ -34,13 +35,25 @@ export default function DispatchPage() {
     try {
       const params = { page, limit: 50 };
       if (search) params.search = search;
-      if (statusFilter) params.status = statusFilter;
+      if (activeTab === 'ready') {
+        params.status = 'ready';
+      } else {
+        if (statusFilter) params.status = statusFilter;
+        // if no filter, history should really exclude ready, but API might not support `not_status`, so let's just let it be all or filtered.
+      }
       const res = await dispatchApi.list(params);
-      setDispatches(res.data);
+      
+      // If history tab and no specific filter, filter out 'ready' on client side if API doesn't support not_status
+      if (activeTab === 'history' && !statusFilter) {
+        setDispatches(res.data.filter(d => d.status !== 'ready'));
+      } else {
+        setDispatches(res.data);
+      }
+      
       setTotal(res.total);
     } catch (err) { toast.error(err.message); }
     finally { setLoading(false); }
-  }, [page, search, statusFilter]);
+  }, [page, search, statusFilter, activeTab]);
 
   useEffect(() => { load(); }, [load]);
   const debouncedSearch = useCallback(debounce(v => { setSearch(v); setPage(1); }, 350), []);
@@ -59,7 +72,7 @@ export default function DispatchPage() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!form.customer_id || !form.quantity || !form.dispatch_date) { toast.error('Customer, quantity, and date required'); return; }
+    if (!form.customer_id || !form.quantity || !form.dispatch_date) { toast.error('Party, quantity, and date required'); return; }
     setSaving(true);
     try {
       await dispatchApi.create({ ...form, quantity: parseFloat(form.quantity) });
@@ -89,15 +102,22 @@ export default function DispatchPage() {
         actions={canCreate && <button className="btn btn-primary" onClick={handleOpenModal}>+ New Dispatch</button>}
       />
 
+      <div className="tabs" style={{ marginBottom: 24 }}>
+        <button className={`tab ${activeTab === 'ready' ? 'active' : ''}`} onClick={() => { setActiveTab('ready'); setPage(1); }}>Ready for Dispatch</button>
+        <button className={`tab ${activeTab === 'history' ? 'active' : ''}`} onClick={() => { setActiveTab('history'); setPage(1); }}>Dispatch History</button>
+      </div>
+
       <div className="toolbar">
         <div className="search-input-wrap">
           <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input className="search-input" placeholder="Search code, customer, tracking…" onChange={e => debouncedSearch(e.target.value)} />
+          <input className="search-input" placeholder="Search code, party, tracking…" onChange={e => debouncedSearch(e.target.value)} />
         </div>
-        <select className="filter-select" value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}>
-          <option value="">All Status</option>
-          {DISPATCH_STATUSES.map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
-        </select>
+        {activeTab === 'history' && (
+          <select className="filter-select" value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}>
+            <option value="">All History Status</option>
+            {DISPATCH_STATUSES.filter(s => s !== 'ready').map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
+          </select>
+        )}
       </div>
 
       <div className="table-wrapper">
@@ -105,7 +125,7 @@ export default function DispatchPage() {
           <thead>
             <tr>
               <th>Code</th>
-              <th>Customer</th>
+              <th>Party</th>
               <th>Qty</th>
               <th>Date</th>
               <th>Vehicle/Courier</th>
@@ -192,9 +212,9 @@ export default function DispatchPage() {
         <form onSubmit={handleSave}>
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Customer <span className="required">*</span></label>
+              <label className="form-label">Party <span className="required">*</span></label>
               <select className="form-control" value={form.customer_id} onChange={e => set('customer_id', e.target.value)}>
-                <option value="">Select customer…</option>
+                <option value="">Select party…</option>
                 {customers.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
               </select>
             </div>

@@ -56,7 +56,7 @@ export default function CustomersPage() {
     setSaving(true);
     try {
       await customersApi.create({ ...form, opening_balance: parseFloat(form.opening_balance) || 0 });
-      toast.success('Customer created successfully');
+      toast.success('Party created successfully');
       setShowModal(false);
       setForm(INITIAL_FORM);
       loadCustomers();
@@ -72,10 +72,10 @@ export default function CustomersPage() {
   return (
     <div className="page">
       <PageHeader
-        title="Customers & Parties"
+        title="Parties"
         subtitle={`${total} records`}
         actions={canCreate && (
-          <button className="btn btn-primary" onClick={() => setShowModal(true)}>+ Add Customer</button>
+          <button className="btn btn-primary" onClick={() => setShowModal(true)}>+ Add Party</button>
         )}
       />
 
@@ -137,8 +137,8 @@ export default function CustomersPage() {
           </tbody>
         </table>
         {!loading && customers.length === 0 && (
-          <EmptyState title="No customers found" description="Add your first customer or supplier" action={
-            canCreate && <button className="btn btn-primary" onClick={() => setShowModal(true)}>Add Customer</button>
+          <EmptyState title="No parties found" description="Add your first customer or supplier party" action={
+            canCreate && <button className="btn btn-primary" onClick={() => setShowModal(true)}>Add Party</button>
           } />
         )}
         <Pagination page={page} total={total} limit={50} onPageChange={setPage} />
@@ -179,18 +179,18 @@ export default function CustomersPage() {
           </div>
         ))}
         {!loading && customers.length === 0 && (
-          <EmptyState title="No customers found" description="Add your first customer" action={
-            canCreate && <button className="btn btn-primary" onClick={() => setShowModal(true)}>Add Customer</button>
+          <EmptyState title="No parties found" description="Add your first party" action={
+            canCreate && <button className="btn btn-primary" onClick={() => setShowModal(true)}>Add Party</button>
           } />
         )}
         <Pagination page={page} total={total} limit={50} onPageChange={setPage} />
       </div>
 
       {/* Create Modal */}
-      <Modal open={showModal} onClose={() => setShowModal(false)} title="Add Customer / Party"
+      <Modal open={showModal} onClose={() => setShowModal(false)} title="Add Party"
         footer={<>
           <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save Customer'}</button>
+          <button className="btn btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save Party'}</button>
         </>}>
         <form onSubmit={handleSave}>
           <div className="form-section">

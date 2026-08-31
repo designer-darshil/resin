@@ -110,13 +110,33 @@ export default function PurchaseDetail() {
                   <div style={{ background: 'var(--color-success)', height: '100%', width: `${Math.min(100, (item.received_quantity / item.quantity) * 100)}%`, borderRadius: 2 }} />
                 </div>
                 {canReceive && item.received_quantity < item.quantity && (
-                  <button
-                    className="btn btn-primary btn-sm"
-                    style={{ marginTop: 8 }}
-                    onClick={() => { setReceiveModal(item); setReceiveQty(''); }}
-                  >
-                    Receive Stock
-                  </button>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      className="btn btn-primary btn-sm"
+                      style={{ marginTop: 8 }}
+                      onClick={() => { setReceiveModal(item); setReceiveQty(''); }}
+                    >
+                      Receive Stock
+                    </button>
+                    {item.raw_quantity > 0 && (
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        style={{ marginTop: 8 }}
+                        onClick={() => navigate(`/coating-jobs?new=1&purchase_item_id=${item.id}`)}
+                      >
+                        Create Coating Job
+                      </button>
+                    )}
+                  </div>
+                )}
+                {(!canReceive || item.received_quantity >= item.quantity) && item.raw_quantity > 0 && (
+                   <button
+                     className="btn btn-secondary btn-sm"
+                     style={{ marginTop: 8 }}
+                     onClick={() => navigate(`/coating-jobs?new=1&purchase_item_id=${item.id}`)}
+                   >
+                     Create Coating Job
+                   </button>
                 )}
               </div>
             ))}

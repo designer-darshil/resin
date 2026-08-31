@@ -14,6 +14,8 @@ router.get('/dashboard', authenticate, (req, res) => {
     jobs_pending: db.prepare(`SELECT COUNT(*) as cnt FROM coating_jobs WHERE job_status IN ('draft','assigned','in_progress') AND is_active = 1`).get()?.cnt || 0,
     jobs_completed: db.prepare(`SELECT COUNT(*) as cnt FROM coating_jobs WHERE job_status = 'completed' AND is_active = 1`).get()?.cnt || 0,
     jobs_quality_check: db.prepare(`SELECT COUNT(*) as cnt FROM coating_jobs WHERE job_status = 'quality_check' AND is_active = 1`).get()?.cnt || 0,
+    jobs_due_today: db.prepare(`SELECT COUNT(*) as cnt FROM coating_jobs WHERE expected_completion = ? AND job_status != 'completed' AND is_active = 1`).get(today)?.cnt || 0,
+    jobs_overdue: db.prepare(`SELECT COUNT(*) as cnt FROM coating_jobs WHERE expected_completion < ? AND job_status != 'completed' AND is_active = 1`).get(today)?.cnt || 0,
 
     // Dispatches
     dispatches_today: db.prepare(`SELECT COUNT(*) as cnt FROM dispatches WHERE dispatch_date = ? AND is_active = 1`).get(today)?.cnt || 0,
@@ -38,6 +40,7 @@ router.get('/dashboard', authenticate, (req, res) => {
 
     // Customers with outstanding
     customers_outstanding: db.prepare(`SELECT COUNT(DISTINCT customer_id) as cnt FROM payments WHERE payment_direction='received' AND is_active=1`).get()?.cnt || 0,
+    payments_today: db.prepare(`SELECT COALESCE(SUM(amount),0) as total FROM payments WHERE payment_date = ? AND payment_direction='received' AND is_active=1`).get(today)?.total || 0,
   };
 
   // Recent jobs

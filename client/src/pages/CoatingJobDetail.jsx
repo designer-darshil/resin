@@ -103,21 +103,12 @@ export default function CoatingJobDetail() {
 
       <PageHeader
         title={job.job_code}
-        subtitle={job.customer_name ? `Customer: ${job.customer_name}` : 'No customer assigned'}
-        actions={<>
-          {canEdit && (
-            <>
-              <button className="btn btn-secondary" onClick={() => { setShowStatusModal(true); }}>Update Status</button>
-              <button className="btn btn-secondary" onClick={() => { loadEmployees(); setShowAssignModal(true); }}>Assign Employee</button>
-              {remaining > 0 && (
-                <button className="btn btn-primary" onClick={() => setShowCompleteModal(true)}>Record Production</button>
-              )}
-            </>
-          )}
-          {job.customer_whatsapp && (
+        subtitle={job.customer_name ? `Party: ${job.customer_name}` : 'No party assigned'}
+        actions={
+          job.customer_whatsapp && (
             <WhatsAppButton phone={job.customer_whatsapp} message={whatsAppMsg} label="Job Update" />
-          )}
-        </>}
+          )
+        }
       />
 
       <div className="detail-grid">
@@ -127,8 +118,8 @@ export default function CoatingJobDetail() {
           <div className="grid-2" style={{ gap: 24, alignItems: 'start' }}>
             <div>
               {[
-                ['Customer', job.customer_name || '—'],
-                ['Status', <StatusBadge key="status" status={job.job_status} />],
+                ['Party', job.customer_name || '—'],
+                ['Status', <div key="status" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><StatusBadge status={job.job_status} /> {canEdit && <button className="btn btn-ghost btn-sm" style={{ padding: '0 4px' }} onClick={() => setShowStatusModal(true)}>✎</button>}</div>],
                 ['Quality', <StatusBadge key="quality" status={job.quality_status || 'pending'} />],
                 ['Diamond Type', job.diamond_type],
                 ['Shape', job.shape],
@@ -154,7 +145,12 @@ export default function CoatingJobDetail() {
             </div>
 
             <div>
-              <h3 className="detail-section-title" style={{ marginTop: 0 }}>Quantities</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <h3 className="detail-section-title" style={{ margin: 0 }}>Quantities</h3>
+                {canEdit && remaining > 0 && (
+                  <button className="btn btn-primary btn-sm" onClick={() => setShowCompleteModal(true)}>+ Production QC</button>
+                )}
+              </div>
               <div className="detail-field">
                  <div className="detail-field-label">Input</div>
                  <div className="detail-field-value">{fmtQty(job.input_quantity)} pcs</div>
@@ -272,7 +268,7 @@ export default function CoatingJobDetail() {
       </Modal>
 
       {/* Record Production Modal */}
-      <Modal open={showCompleteModal} onClose={() => setShowCompleteModal(false)} title="Record Production"
+      <Modal open={showCompleteModal} onClose={() => setShowCompleteModal(false)} title="Record Production QC"
         footer={<>
           <button className="btn btn-secondary" onClick={() => setShowCompleteModal(false)}>Cancel</button>
           <button className="btn btn-primary" onClick={handleComplete} disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
@@ -282,7 +278,7 @@ export default function CoatingJobDetail() {
         </div>
         <div className="form-row">
           <div className="form-group">
-            <label className="form-label">Completed Quantity</label>
+            <label className="form-label">QC Passed (Completed)</label>
             <input
               className="form-control" type="number" inputMode="numeric"
               value={completeForm.completed_quantity}
@@ -291,7 +287,7 @@ export default function CoatingJobDetail() {
             />
           </div>
           <div className="form-group">
-            <label className="form-label">Rejected Quantity</label>
+            <label className="form-label">QC Failed (Rejected)</label>
             <input
               className="form-control" type="number" inputMode="numeric"
               value={completeForm.rejected_quantity}
