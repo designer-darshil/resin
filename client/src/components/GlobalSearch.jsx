@@ -41,8 +41,9 @@ export default function GlobalSearch({ isOpen, onClose }) {
     }
     setLoading(true);
     try {
+      const token = localStorage.getItem('resin_token') || localStorage.getItem('token');
       const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
       setResults(data);

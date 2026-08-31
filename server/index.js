@@ -43,9 +43,29 @@ routeModules.forEach(([routePath, router]) => {
   app.use(routePath, router);
 });
 
-// Health check
+// Health check & database diagnostics
 app.get(['/health', '/api/health'], (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  const db = require('./db/database');
+  const isVercel = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+  let dbStatus = 'ok';
+  let counts = {};
+  try {
+    const custCount = db.prepare('SELECT COUNT(*) as c FROM customers').get()?.c || 0;
+    const purCount = db.prepare('SELECT COUNT(*) as c FROM purchases').get()?.c || 0;
+    const jobCount = db.prepare('SELECT COUNT(*) as c FROM coating_jobs').get()?.c || 0;
+    counts = { customers: custCount, purchases: purCount, coating_jobs: jobCount };
+  } catch (err) {
+    dbStatus = 'error: ' + err.message;
+  }
+
+  res.json({
+    status: 'ok',
+    environment: isVercel ? 'vercel-serverless' : 'persistent-node',
+    database_status: dbStatus,
+    storage_type: isVercel ? 'ephemeral-lambda-tmp' : 'local-disk-persistent',
+    records_summary: counts,
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Error handler

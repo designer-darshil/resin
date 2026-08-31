@@ -106,7 +106,7 @@ export default function CoatingJobDetail() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('resin_token') || localStorage.getItem('token')}`
         },
         body: JSON.stringify({
           customer_id: job.customer_id,

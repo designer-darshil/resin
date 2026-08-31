@@ -26,7 +26,12 @@ export default function CustomerDetail() {
 
   const load = async () => {
     try {
-      const res = await fetch('/api/whatsapp/templates', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
+      const res = await fetch('/api/whatsapp/templates', { 
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('resin_token') || localStorage.getItem('token')}` 
+        } 
+      });
       const tmplData = await res.json();
       if (tmplData.data) setTemplates(tmplData.data);
       

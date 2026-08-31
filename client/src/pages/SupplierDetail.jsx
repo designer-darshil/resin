@@ -118,7 +118,7 @@ export default function SupplierDetail() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('resin_token') || localStorage.getItem('token')}`
         },
         body: JSON.stringify({
           customer_id: id,

@@ -5,6 +5,10 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import { PageHeader, StatusBadge, Modal, EmptyState } from '../components/ui.jsx';
 import { fmtDate } from '../utils/helpers.js';
 
+function getAuthToken() {
+  return localStorage.getItem('resin_token') || localStorage.getItem('token');
+}
+
 export default function WhatsAppPage() {
   const [activeTab, setActiveTab] = useState('connection');
   const [connectionStatus, setConnectionStatus] = useState({ status: 'checking', instance: 'resin' });
@@ -42,7 +46,7 @@ export default function WhatsAppPage() {
   const loadStatus = useCallback(async () => {
     try {
       const res = await fetch('/api/evolution/status', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
       });
       const data = await res.json();
       setConnectionStatus(data);
@@ -59,8 +63,8 @@ export default function WhatsAppPage() {
   const loadAutomations = useCallback(async () => {
     try {
       const [autoRes, setRes, tmplRes] = await Promise.all([
-        fetch('/api/evolution/automations', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }),
-        fetch('/api/evolution/settings', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }),
+        fetch('/api/evolution/automations', { headers: { 'Authorization': `Bearer ${getAuthToken()}` } }),
+        fetch('/api/evolution/settings', { headers: { 'Authorization': `Bearer ${getAuthToken()}` } }),
         whatsappApi.templates()
       ]);
       const autoData = await autoRes.json();
@@ -77,7 +81,7 @@ export default function WhatsAppPage() {
   const loadLogs = useCallback(async () => {
     try {
       const res = await fetch('/api/whatsapp/logs', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
       });
       const data = await res.json();
       setLogs(data.data || []);
@@ -114,7 +118,7 @@ export default function WhatsAppPage() {
     try {
       const res = await fetch('/api/evolution/connect', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
       });
       const data = await res.json();
       if (data.qrcode) {
@@ -137,7 +141,7 @@ export default function WhatsAppPage() {
     try {
       await fetch('/api/evolution/disconnect', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
       });
       toast.success('WhatsApp disconnected');
       loadStatus();
@@ -155,7 +159,7 @@ export default function WhatsAppPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${getAuthToken()}`
         },
         body: JSON.stringify(testForm)
       });
@@ -180,7 +184,7 @@ export default function WhatsAppPage() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${getAuthToken()}`
         },
         body: JSON.stringify({ [key]: newVal })
       });
@@ -196,7 +200,7 @@ export default function WhatsAppPage() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${getAuthToken()}`
         },
         body: JSON.stringify({ is_enabled: isEnabled ? 1 : 0, template_id: templateId })
       });
@@ -211,7 +215,7 @@ export default function WhatsAppPage() {
     try {
       const res = await fetch(`/api/evolution/logs/${logId}/retry`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
       });
       if (res.ok) {
         toast.success('Message retried successfully');
