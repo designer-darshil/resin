@@ -23,7 +23,7 @@ router.post('/login', (req, res) => {
     return res.status(401).json({ error: 'Invalid username or password' });
   }
 
-  const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+  const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET || 'resin-coating-jwt-super-secret-key-2024', {
     expiresIn: process.env.JWT_EXPIRES_IN || '7d'
   });
 

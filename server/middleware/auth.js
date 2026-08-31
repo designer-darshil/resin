@@ -9,7 +9,7 @@ const authenticate = (req, res, next) => {
 
   const token = authHeader.split(' ')[1];
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'resin-coating-jwt-super-secret-key-2024');
     const user = db.prepare(`
       SELECT u.*, r.name as role_name
       FROM users u JOIN roles r ON u.role_id = r.id
