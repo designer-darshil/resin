@@ -1,5 +1,5 @@
 // API client — centralized fetch wrapper
-const BASE = '/api';
+const BASE = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) ? import.meta.env.VITE_API_URL : '/api';
 
 function getToken() {
   return localStorage.getItem('resin_token');
