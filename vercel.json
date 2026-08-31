@@ -1,12 +1,7 @@
 {
-  "version": 2,
   "buildCommand": "npm --prefix client install && npm --prefix client run build",
   "outputDirectory": "client/dist",
   "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api"
-    },
     {
       "source": "/((?!api/|favicon\\.ico|favicon\\.svg|assets/).*)",
       "destination": "/index.html"
