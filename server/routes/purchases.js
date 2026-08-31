@@ -4,6 +4,7 @@ const db = require('../db/database');
 const { authenticate } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/permissions');
 const { auditLog, generateCode, getIp } = require('../utils/audit');
+const WhatsAppService = require('../services/whatsappService');
 
 // GET /api/purchases
 router.get('/', authenticate, requirePermission('purchases', 'can_view'), (req, res) => {
@@ -152,6 +153,19 @@ router.post('/:id/receive', authenticate, requirePermission('purchases', 'can_ed
 
   receiveItems();
   auditLog(req.user.id, 'RECEIVE_STOCK', 'purchases', req.params.id, `Received ${received_quantity} units for item ${item_id}`, null, null, getIp(req));
+
+  // Trigger automated WhatsApp notification
+  const purchase = db.prepare('SELECT p.*, c.company_name, c.phone, c.whatsapp_number FROM purchases p LEFT JOIN customers c ON p.supplier_id = c.id WHERE p.id = ?').get(req.params.id);
+  if (purchase && purchase.supplier_id) {
+    WhatsAppService.processTriggerEvent('purchase_received', 'purchase', req.params.id, {
+      customer_id: purchase.supplier_id,
+      supplier_name: purchase.company_name || 'Valued Supplier',
+      purchase_number: purchase.purchase_code,
+      quantity: received_quantity,
+      weight: item.weight || 0
+    });
+  }
+
   res.json({ message: `Received ${received_quantity} units successfully` });
 });
 

@@ -9,6 +9,8 @@ import LoginPage from './pages/Login.jsx';
 
 // Lazy-loaded pages
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
+const SuppliersPage = lazy(() => import('./pages/Suppliers.jsx'));
+const SupplierDetail = lazy(() => import('./pages/SupplierDetail.jsx'));
 const CustomersPage = lazy(() => import('./pages/Customers.jsx'));
 const CustomerDetail = lazy(() => import('./pages/CustomerDetail.jsx'));
 const PurchasesPage = lazy(() => import('./pages/Purchases.jsx'));
@@ -69,6 +71,8 @@ function AppRoutes() {
             <Suspense fallback={<LoadingFallback />}>
               <Routes>
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/suppliers" element={<SuppliersPage />} />
+                <Route path="/suppliers/:id" element={<SupplierDetail />} />
                 <Route path="/customers" element={<CustomersPage />} />
                 <Route path="/customers/:id" element={<CustomerDetail />} />
                 <Route path="/purchases" element={<PurchasesPage />} />

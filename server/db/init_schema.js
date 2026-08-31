@@ -330,16 +330,52 @@ function initSchema(db) {
       updated_at TEXT DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS whatsapp_automations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      trigger_event TEXT UNIQUE NOT NULL,
+      recipient_role TEXT NOT NULL DEFAULT 'buyer',
+      template_id INTEGER REFERENCES whatsapp_templates(id),
+      is_enabled INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS whatsapp_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       customer_id INTEGER REFERENCES customers(id),
       template_id INTEGER REFERENCES whatsapp_templates(id),
       phone_number TEXT,
       message_body TEXT,
+      status TEXT DEFAULT 'sent',
+      message_id TEXT,
+      idempotency_key TEXT UNIQUE,
+      error_message TEXT,
+      retry_count INTEGER DEFAULT 0,
+      trigger_event TEXT,
+      related_entity_type TEXT,
+      related_entity_id INTEGER,
       sent_by INTEGER REFERENCES users(id),
-      created_at TEXT DEFAULT (datetime('now'))
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
     );
   `);
+
+  // Run dynamic schema migrations on existing database if columns are missing
+  try {
+    const columns = db.prepare(`PRAGMA table_info(whatsapp_logs)`).all().map(c => c.name);
+    if (!columns.includes('status')) db.exec(`ALTER TABLE whatsapp_logs ADD COLUMN status TEXT DEFAULT 'sent'`);
+    if (!columns.includes('message_id')) db.exec(`ALTER TABLE whatsapp_logs ADD COLUMN message_id TEXT`);
+    if (!columns.includes('idempotency_key')) db.exec(`ALTER TABLE whatsapp_logs ADD COLUMN idempotency_key TEXT`);
+    if (!columns.includes('error_message')) db.exec(`ALTER TABLE whatsapp_logs ADD COLUMN error_message TEXT`);
+    if (!columns.includes('retry_count')) db.exec(`ALTER TABLE whatsapp_logs ADD COLUMN retry_count INTEGER DEFAULT 0`);
+    if (!columns.includes('trigger_event')) db.exec(`ALTER TABLE whatsapp_logs ADD COLUMN trigger_event TEXT`);
+    if (!columns.includes('related_entity_type')) db.exec(`ALTER TABLE whatsapp_logs ADD COLUMN related_entity_type TEXT`);
+    if (!columns.includes('related_entity_id')) db.exec(`ALTER TABLE whatsapp_logs ADD COLUMN related_entity_id INTEGER`);
+    if (!columns.includes('updated_at')) db.exec(`ALTER TABLE whatsapp_logs ADD COLUMN updated_at TEXT`);
+  } catch (e) {
+    console.error('Migration error on whatsapp_logs:', e.message);
+  }
 
   // Seed roles
   const insertRole = db.prepare(`INSERT OR IGNORE INTO roles (name, description, is_system_role) VALUES (?, ?, 1)`);
@@ -400,7 +436,7 @@ function initSchema(db) {
     `).run('admin', 'admin@resin.local', hash, 'Administrator', roleMap['admin']);
   }
 
-  // Seed settings
+  // Seed default settings
   const defaultSettings = [
     ['business_name', 'Resin Diamond Coating', 'Business Name', 'business'],
     ['currency_symbol', '₹', 'Currency Symbol', 'business'],
@@ -408,9 +444,94 @@ function initSchema(db) {
     ['date_format', 'DD/MM/YYYY', 'Date Format', 'business'],
     ['overtime_default_rate', '150', 'Default Overtime Rate (per hour)', 'employees'],
     ['salary_default_type', 'monthly', 'Default Salary Type', 'employees'],
+    ['whatsapp_automation_enabled', '0', 'WhatsApp Automation Master Toggle', 'whatsapp'],
+    ['whatsapp_test_mode', '0', 'WhatsApp Test Mode (Log only, no real send)', 'whatsapp'],
+    ['whatsapp_require_approval', '0', 'Require Approval for Automated WhatsApp Messages', 'whatsapp'],
+    ['whatsapp_auto_retry', '1', 'Auto Retry Failed WhatsApp Messages', 'whatsapp'],
+    ['whatsapp_max_retries', '3', 'Maximum Retry Attempts', 'whatsapp'],
   ];
   const insertSetting = db.prepare(`INSERT OR IGNORE INTO settings (key, value, label, category) VALUES (?, ?, ?, ?)`);
   defaultSettings.forEach(s => insertSetting.run(...s));
+
+  // Seed default WhatsApp templates
+  const defaultTemplates = [
+    {
+      name: 'Purchase Received',
+      category: 'order_update',
+      template_body: 'Hello {{supplier_name}},\n\nWe have received your diamond shipment for Purchase {{purchase_number}}.\nTotal Quantity: {{quantity}} pcs ({{weight}} ct).\n\nThank you,\nResin Diamond Coating',
+      variables: JSON.stringify(['supplier_name', 'purchase_number', 'quantity', 'weight'])
+    },
+    {
+      name: 'Purchase Confirmation',
+      category: 'order_update',
+      template_body: 'Hello {{supplier_name}},\n\nPurchase {{purchase_number}} has been verified and confirmed.\nTotal Amount: ₹{{amount}}.\n\nThank you,\nResin Diamond Coating',
+      variables: JSON.stringify(['supplier_name', 'purchase_number', 'amount'])
+    },
+    {
+      name: 'Job Received',
+      category: 'order_update',
+      template_body: 'Hello {{party_name}},\n\nYour coating job {{job_number}} has been created and received.\nQuantity: {{quantity}} pcs\nCoating Type: {{coating_type}}\nExpected Completion: {{due_date}}.\n\nThank you,\nResin Diamond Coating',
+      variables: JSON.stringify(['party_name', 'job_number', 'quantity', 'coating_type', 'due_date'])
+    },
+    {
+      name: 'Coating Completed',
+      category: 'quality_update',
+      template_body: 'Hello {{party_name}},\n\nYour coating job {{job_number}} has been completed.\n\nQuantity: {{quantity}} pcs\nCoating: {{coating_type}}\n\nIt is now ready for the next step.\nThank you,\nResin Diamond Coating',
+      variables: JSON.stringify(['party_name', 'job_number', 'quantity', 'coating_type'])
+    },
+    {
+      name: 'Ready for Dispatch',
+      category: 'dispatch_notification',
+      template_body: 'Hello {{party_name}},\n\nYour coated diamonds for job {{job_number}} ({{quantity}} pcs) are packed and ready for dispatch.\n\nThank you,\nResin Diamond Coating',
+      variables: JSON.stringify(['party_name', 'job_number', 'quantity'])
+    },
+    {
+      name: 'Dispatch Confirmation',
+      category: 'dispatch_notification',
+      template_body: 'Hello {{party_name}},\n\nYour order {{dispatch_number}} has been dispatched on {{dispatch_date}}.\nQuantity: {{quantity}} pcs ({{weight}} ct).\nTracking Number: {{tracking_number}}.\n\nThank you,\nResin Diamond Coating',
+      variables: JSON.stringify(['party_name', 'dispatch_number', 'dispatch_date', 'quantity', 'weight', 'tracking_number'])
+    },
+    {
+      name: 'Payment Confirmation',
+      category: 'payment_reminder',
+      template_body: 'Hello {{party_name}},\n\nWe have recorded a payment of ₹{{amount}} via {{payment_method}} (Ref: {{payment_reference}}).\nRemaining Outstanding Balance: ₹{{balance}}.\n\nThank you,\nResin Diamond Coating',
+      variables: JSON.stringify(['party_name', 'amount', 'payment_method', 'payment_reference', 'balance'])
+    },
+    {
+      name: 'Payment Reminder',
+      category: 'payment_reminder',
+      template_body: 'Hello {{party_name}},\n\nThis is a friendly reminder regarding your outstanding balance of ₹{{balance}} with Resin Diamond Coating.\nKindly arrange payment at your earliest convenience.\n\nThank you,\nResin Diamond Coating',
+      variables: JSON.stringify(['party_name', 'balance'])
+    },
+    {
+      name: 'Job Delay Notification',
+      category: 'order_update',
+      template_body: 'Hello {{party_name}},\n\nWe would like to inform you that your coating job {{job_number}} is experiencing a slight delay. Revised estimated completion: {{due_date}}.\nWe apologize for the inconvenience.\n\nResin Diamond Coating',
+      variables: JSON.stringify(['party_name', 'job_number', 'due_date'])
+    }
+  ];
+
+  const insertTmpl = db.prepare(`INSERT OR IGNORE INTO whatsapp_templates (name, category, template_body, variables) VALUES (?, ?, ?, ?)`);
+  defaultTemplates.forEach(t => insertTmpl.run(t.name, t.category, t.template_body, t.variables));
+
+  // Seed default Automations
+  const defaultAutomations = [
+    { name: 'Purchase Received', trigger_event: 'purchase_received', recipient_role: 'seller', template_name: 'Purchase Received' },
+    { name: 'Purchase Confirmation', trigger_event: 'purchase_confirmed', recipient_role: 'seller', template_name: 'Purchase Confirmation' },
+    { name: 'Coating Job Created', trigger_event: 'job_created', recipient_role: 'buyer', template_name: 'Job Received' },
+    { name: 'Coating Job Completed', trigger_event: 'coating_completed', recipient_role: 'buyer', template_name: 'Coating Completed' },
+    { name: 'Job Ready for Dispatch', trigger_event: 'ready_for_dispatch', recipient_role: 'buyer', template_name: 'Ready for Dispatch' },
+    { name: 'Dispatch Confirmed', trigger_event: 'dispatch_confirmed', recipient_role: 'buyer', template_name: 'Dispatch Confirmation' },
+    { name: 'Payment Received', trigger_event: 'payment_received', recipient_role: 'party', template_name: 'Payment Confirmation' },
+    { name: 'Payment Reminder', trigger_event: 'payment_reminder', recipient_role: 'party', template_name: 'Payment Reminder' },
+    { name: 'Job Delayed', trigger_event: 'job_delayed', recipient_role: 'buyer', template_name: 'Job Delay Notification' },
+  ];
+
+  const insertAuto = db.prepare(`
+    INSERT OR IGNORE INTO whatsapp_automations (name, trigger_event, recipient_role, template_id, is_enabled)
+    VALUES (?, ?, ?, (SELECT id FROM whatsapp_templates WHERE name = ? LIMIT 1), 0)
+  `);
+  defaultAutomations.forEach(a => insertAuto.run(a.name, a.trigger_event, a.recipient_role, a.template_name));
 }
 
 module.exports = initSchema;

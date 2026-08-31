@@ -55,11 +55,11 @@ export default function CustomersPage() {
     if (!form.company_name.trim()) { toast.error('Company name is required'); return; }
     setSaving(true);
     try {
-      await customersApi.create({ ...form, opening_balance: parseFloat(form.opening_balance) || 0 });
+      const created = await customersApi.create({ ...form, opening_balance: parseFloat(form.opening_balance) || 0 });
       toast.success('Party created successfully');
       setShowModal(false);
       setForm(INITIAL_FORM);
-      loadCustomers();
+      navigate(`/customers/${created.id}`);
     } catch (err) {
       toast.error(err.message);
     } finally {

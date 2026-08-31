@@ -4,6 +4,7 @@ const db = require('../db/database');
 const { authenticate } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/permissions');
 const { auditLog, generateCode, getIp } = require('../utils/audit');
+const WhatsAppService = require('../services/whatsappService');
 
 // GET /api/payments
 router.get('/', authenticate, requirePermission('payments', 'can_view'), (req, res) => {
@@ -64,6 +65,20 @@ router.post('/', authenticate, requirePermission('payments', 'can_create'), (req
 
   const payment = db.prepare('SELECT * FROM payments WHERE id = ?').get(result.lastInsertRowid);
   auditLog(req.user.id, 'CREATE', 'payments', result.lastInsertRowid, `Payment of ₹${amount} recorded`, null, payment, getIp(req));
+
+  // Trigger automated WhatsApp notification
+  if (customer_id) {
+    const cust = db.prepare('SELECT company_name, phone, whatsapp_number, opening_balance FROM customers WHERE id = ?').get(customer_id);
+    WhatsAppService.processTriggerEvent('payment_received', 'payment', result.lastInsertRowid, {
+      customer_id,
+      party_name: cust?.company_name || 'Valued Partner',
+      amount: parseFloat(amount).toLocaleString('en-IN'),
+      payment_method: payment_method || 'cash',
+      payment_reference: reference_number || 'Direct',
+      balance: (cust?.opening_balance || 0).toLocaleString('en-IN')
+    });
+  }
+
   res.status(201).json(payment);
 });
 

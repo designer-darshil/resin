@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import GlobalSearch from './GlobalSearch.jsx';
 
 const navGroups = [
   {
@@ -10,7 +11,7 @@ const navGroups = [
     ]
   },
   {
-    label: 'WORK',
+    label: 'OPERATIONS',
     items: [
       { to: '/purchases', label: 'Purchases', icon: PurchaseIcon, perm: 'purchases' },
       { to: '/stock', label: 'Stock', icon: StockIcon, perm: 'stock' },
@@ -21,16 +22,16 @@ const navGroups = [
   {
     label: 'PEOPLE',
     items: [
-      { to: '/customers', label: 'Parties', icon: CustomerIcon, perm: 'customers' },
+      { to: '/suppliers', label: 'Suppliers', icon: SupplierIcon, perm: 'purchases' },
+      { to: '/customers', label: 'Customers / Parties', icon: CustomerIcon, perm: 'customers' },
       { to: '/employees', label: 'Employees', icon: EmployeeIcon, perm: 'employees' },
     ]
   },
   {
-    label: 'MONEY',
+    label: 'FINANCE',
     items: [
       { to: '/payments', label: 'Payments', icon: PayIcon, perm: 'payments' },
       { to: '/salary', label: 'Salary', icon: SalaryIcon, perm: 'salary' },
-      { to: '/advances', label: 'Advances', icon: AdvIcon, perm: 'salary' },
       { to: '/overtime', label: 'Overtime', icon: OTIcon, perm: 'overtime' },
     ]
   },
@@ -59,14 +60,20 @@ const bottomNav = [
   { to: '/dashboard', label: 'Home', icon: HomeIcon },
   { to: '/coating-jobs', label: 'Jobs', icon: JobIcon },
   { to: '/stock', label: 'Stock', icon: StockIcon },
+  { to: '/suppliers', label: 'Suppliers', icon: SupplierIcon },
   { to: '/customers', label: 'Parties', icon: CustomerIcon },
-  { to: '/employees', label: 'Employees', icon: EmployeeIcon },
 ];
 
 export default function AppShell({ children }) {
   const { user, logout, hasPermission, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  useEffect(() => {
+    window.openGlobalSearch = () => setSearchOpen(true);
+    return () => { delete window.openGlobalSearch; };
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -75,6 +82,9 @@ export default function AppShell({ children }) {
 
   return (
     <div className="app-layout">
+      {/* Global Search Modal */}
+      <GlobalSearch isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+
       {/* Sidebar Overlay (mobile) */}
       {sidebarOpen && (
         <div className="sidebar-overlay visible" onClick={() => setSidebarOpen(false)} />
@@ -85,6 +95,26 @@ export default function AppShell({ children }) {
         <div className="sidebar-logo">
           <h1>💎 Resin</h1>
           <p>Operations Manager</p>
+        </div>
+
+        {/* Search Bar Button in Sidebar */}
+        <div style={{ padding: '0 12px', marginBottom: 12 }}>
+          <button
+            onClick={() => setSearchOpen(true)}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+              padding: '8px 12px', background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6,
+              color: 'var(--sidebar-text)', cursor: 'pointer', fontSize: 13,
+              textAlign: 'left'
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            <span style={{ flex: 1, opacity: 0.8 }}>Search (Jobs, Stock)...</span>
+            <kbd style={{ fontSize: 10, background: 'rgba(0,0,0,0.3)', padding: '2px 4px', borderRadius: 3, border: '1px solid rgba(255,255,255,0.1)' }}>⌘K</kbd>
+          </button>
         </div>
 
         <div className="sidebar-nav">
@@ -154,9 +184,14 @@ export default function AppShell({ children }) {
             <MenuIcon />
           </button>
           <h2>💎 Resin</h2>
-          <button className="btn btn-ghost btn-icon" onClick={handleLogout}>
-            <LogoutIcon />
-          </button>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <button className="btn btn-ghost btn-icon" onClick={() => setSearchOpen(true)}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            </button>
+            <button className="btn btn-ghost btn-icon" onClick={handleLogout}>
+              <LogoutIcon />
+            </button>
+          </div>
         </header>
 
         {/* Page Content */}
@@ -186,6 +221,9 @@ function HomeIcon({ className }) {
 }
 function PurchaseIcon({ className }) {
   return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>;
+}
+function SupplierIcon({ className }) {
+  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 21h18M3 7v1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7H3l2-4h14l2 4M5 21V10.85M19 21V10.85M9 21v-4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4"/></svg>;
 }
 function StockIcon({ className }) {
   return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>;

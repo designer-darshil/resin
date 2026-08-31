@@ -32,6 +32,8 @@ const routeModules = [
   ['/dispatch', require('./routes/dispatch')],
   ['/payments', require('./routes/payments')],
   ['/whatsapp', require('./routes/whatsapp')],
+  ['/evolution', require('./routes/evolution')],
+  ['/search', require('./routes/search')],
   ['/reports', require('./routes/reports')],
   ['/admin', require('./routes/admin')],
 ];

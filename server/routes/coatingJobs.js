@@ -4,6 +4,7 @@ const db = require('../db/database');
 const { authenticate } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/permissions');
 const { auditLog, generateCode, getIp } = require('../utils/audit');
+const WhatsAppService = require('../services/whatsappService');
 
 // GET /api/coating-jobs
 router.get('/', authenticate, requirePermission('coating_jobs', 'can_view'), (req, res) => {
@@ -91,6 +92,20 @@ router.post('/', authenticate, requirePermission('coating_jobs', 'can_create'), 
   const jobId = createJob();
   const job = db.prepare('SELECT * FROM coating_jobs WHERE id = ?').get(jobId);
   auditLog(req.user.id, 'CREATE', 'coating_jobs', jobId, `Created coating job ${code}`, null, job, getIp(req));
+
+  // Trigger automated WhatsApp notification
+  if (job.customer_id) {
+    const cust = db.prepare('SELECT company_name, phone, whatsapp_number FROM customers WHERE id = ?').get(job.customer_id);
+    WhatsAppService.processTriggerEvent('job_created', 'job', jobId, {
+      customer_id: job.customer_id,
+      party_name: cust?.company_name || 'Valued Customer',
+      job_number: job.job_code,
+      quantity: job.input_quantity,
+      coating_type: job.coating_type || 'Standard',
+      due_date: job.expected_completion || 'TBD'
+    });
+  }
+
   res.status(201).json(job);
 });
 
@@ -242,6 +257,19 @@ router.post('/:id/complete', authenticate, requirePermission('coating_jobs', 'ca
 
   completeJob();
   auditLog(req.user.id, 'COMPLETE', 'coating_jobs', req.params.id, `Completed job ${job.job_code}: ${completed} passed, ${rejected} rejected`, null, null, getIp(req));
+
+  // Trigger automated WhatsApp notification
+  if (job.customer_id && completed > 0) {
+    const cust = db.prepare('SELECT company_name, phone, whatsapp_number FROM customers WHERE id = ?').get(job.customer_id);
+    WhatsAppService.processTriggerEvent('coating_completed', 'job', req.params.id, {
+      customer_id: job.customer_id,
+      party_name: cust?.company_name || 'Valued Customer',
+      job_number: job.job_code,
+      quantity: completed,
+      coating_type: job.coating_type || 'Standard'
+    });
+  }
+
   res.json({ message: 'Job completion recorded successfully' });
 });
 

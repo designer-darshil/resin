@@ -4,6 +4,7 @@ const db = require('../db/database');
 const { authenticate } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/permissions');
 const { auditLog, generateCode, getIp } = require('../utils/audit');
+const WhatsAppService = require('../services/whatsappService');
 
 // GET /api/dispatch
 router.get('/', authenticate, requirePermission('dispatch', 'can_view'), (req, res) => {
@@ -91,6 +92,21 @@ router.post('/', authenticate, requirePermission('dispatch', 'can_create'), (req
   const dispatchId = createDispatch();
   const dispatch = db.prepare('SELECT * FROM dispatches WHERE id = ?').get(dispatchId);
   auditLog(req.user.id, 'CREATE', 'dispatch', dispatchId, `Created dispatch ${code}`, null, dispatch, getIp(req));
+
+  // Trigger automated WhatsApp notification
+  if (dispatch.customer_id) {
+    const cust = db.prepare('SELECT company_name, phone, whatsapp_number FROM customers WHERE id = ?').get(dispatch.customer_id);
+    WhatsAppService.processTriggerEvent('dispatch_confirmed', 'dispatch', dispatchId, {
+      customer_id: dispatch.customer_id,
+      party_name: cust?.company_name || 'Valued Customer',
+      dispatch_number: dispatch.dispatch_code,
+      dispatch_date: dispatch.dispatch_date,
+      quantity: dispatch.quantity,
+      weight: dispatch.weight || 0,
+      tracking_number: dispatch.tracking_number || 'N/A'
+    });
+  }
+
   res.status(201).json(dispatch);
 });
 
