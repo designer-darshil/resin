@@ -19,29 +19,10 @@ async function request(method, path, body, signal) {
       signal,
     });
   } catch (netErr) {
-    // If static hosting environment without backend server
-    if (path === '/auth/login' && body?.username === 'admin' && body?.password === 'admin123') {
-      return {
-        token: 'demo-session-token-admin',
-        user: { id: 1, username: 'admin', full_name: 'Administrator', role_name: 'admin', email: 'admin@resin.local' }
-      };
-    }
     throw new Error('Could not connect to API server.');
   }
 
   if (!res.ok) {
-    // Handle static hosting 405 fallback for default admin
-    if (res.status === 405 && path === '/auth/login') {
-      if (body?.username === 'admin' && body?.password === 'admin123') {
-        return {
-          token: 'demo-session-token-admin',
-          user: { id: 1, username: 'admin', full_name: 'Administrator', role_name: 'admin', email: 'admin@resin.local' }
-        };
-      } else {
-        throw new Error('Invalid username or password');
-      }
-    }
-
     const err = await res.json().catch(() => ({ error: `Error ${res.status}` }));
     throw new Error(err.error || `Error ${res.status}`);
   }
@@ -59,16 +40,7 @@ export const api = {
 // Auth
 export const authApi = {
   login: (username, password) => api.post('/auth/login', { username, password }),
-  me: async () => {
-    try {
-      return await api.get('/auth/me');
-    } catch (err) {
-      if (getToken() === 'demo-session-token-admin') {
-        return { id: 1, username: 'admin', full_name: 'Administrator', role_name: 'admin', email: 'admin@resin.local' };
-      }
-      throw err;
-    }
-  },
+  me: () => api.get('/auth/me'),
   logout: () => api.post('/auth/logout'),
   changePassword: (current_password, new_password) =>
     api.post('/auth/change-password', { current_password, new_password }),
