@@ -16,25 +16,33 @@ app.use(express.urlencoded({ extended: true }));
 
 // Static uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/api/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Routes
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/customers', require('./routes/customers'));
-app.use('/api/purchases', require('./routes/purchases'));
-app.use('/api/stock', require('./routes/stock'));
-app.use('/api/coating-jobs', require('./routes/coatingJobs'));
-app.use('/api/employees', require('./routes/employees'));
-app.use('/api/overtime', require('./routes/overtime'));
-app.use('/api/salary', require('./routes/salary'));
-app.use('/api/advances', require('./routes/advances'));
-app.use('/api/dispatch', require('./routes/dispatch'));
-app.use('/api/payments', require('./routes/payments'));
-app.use('/api/whatsapp', require('./routes/whatsapp'));
-app.use('/api/reports', require('./routes/reports'));
-app.use('/api/admin', require('./routes/admin'));
+// Routes mounted with and without /api prefix for local and serverless compatibility
+const routeModules = [
+  ['/auth', require('./routes/auth')],
+  ['/customers', require('./routes/customers')],
+  ['/purchases', require('./routes/purchases')],
+  ['/stock', require('./routes/stock')],
+  ['/coating-jobs', require('./routes/coatingJobs')],
+  ['/employees', require('./routes/employees')],
+  ['/overtime', require('./routes/overtime')],
+  ['/salary', require('./routes/salary')],
+  ['/advances', require('./routes/advances')],
+  ['/dispatch', require('./routes/dispatch')],
+  ['/payments', require('./routes/payments')],
+  ['/whatsapp', require('./routes/whatsapp')],
+  ['/reports', require('./routes/reports')],
+  ['/admin', require('./routes/admin')],
+];
+
+routeModules.forEach(([routePath, router]) => {
+  app.use(`/api${routePath}`, router);
+  app.use(routePath, router);
+});
 
 // Health check
-app.get('/api/health', (req, res) => {
+app.get(['/health', '/api/health'], (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
