@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="gradPrimary" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="50%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="gradHighlight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#93c5fd"/>
+      <stop offset="100%" stop-color="#60a5fa"/>
+    </linearGradient>
+    <linearGradient id="gradDark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e40af"/>
+      <stop offset="100%" stop-color="#1e3a8a"/>
+    </linearGradient>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#0f0f1b"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background container with rounded corners -->
+  <rect width="64" height="64" rx="14" fill="url(#bgGrad)"/>
+  <rect width="62" height="62" x="1" y="1" rx="13" fill="none" stroke="#2563eb" stroke-opacity="0.3" stroke-width="1.5"/>
+
+  <!-- Diamond Facets -->
+  <!-- Top Center Table Facet -->
+  <polygon points="22,18 42,18 32,26" fill="url(#gradHighlight)"/>
+  
+  <!-- Top Left Star Facet -->
+  <polygon points="12,24 22,18 32,26" fill="url(#gradPrimary)"/>
+  
+  <!-- Top Right Star Facet -->
+  <polygon points="42,18 52,24 32,26" fill="url(#gradPrimary)"/>
+  
+  <!-- Bottom Center Pavilion Facet -->
+  <polygon points="32,26 12,24 32,48" fill="url(#gradPrimary)"/>
+  <polygon points="32,26 52,24 32,48" fill="url(#gradDark)"/>
+  
+  <!-- Facet highlight line / sparkle -->
+  <circle cx="24" cy="22" r="1.5" fill="#ffffff" opacity="0.8"/>
+  <path d="M 45 15 Q 46 17 48 18 Q 46 19 45 21 Q 44 19 42 18 Q 44 17 45 15 Z" fill="#ffffff" opacity="0.9"/>
+</svg>
