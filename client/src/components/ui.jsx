@@ -1,17 +1,28 @@
 import { getStatusVariant, statusLabel } from '../utils/helpers.js';
 
-export function StatusBadge({ status }) {
+export function StatusDot({ status }) {
   const variant = getStatusVariant(status);
+  return <span className={`status-dot ${variant}`} />;
+}
+
+export function StatusBadge({ status, text }) {
+  const variant = getStatusVariant(status);
+  const label = text || statusLabel(status);
   return (
     <span className={`badge badge-${variant}`}>
-      {statusLabel(status)}
+      <span className={`status-dot ${variant}`} style={{ width: 5, height: 5 }} />
+      {label}
     </span>
   );
 }
 
-export function StatCard({ label, value, sub, variant = '' }) {
+export function StatCard({ label, value, sub, variant = '', onClick }) {
   return (
-    <div className={`stat-card ${variant}`}>
+    <div
+      className={`stat-card ${variant} ${onClick ? 'interactive' : ''}`}
+      onClick={onClick}
+      style={onClick ? { cursor: 'pointer' } : undefined}
+    >
       <div className="stat-card-label">{label}</div>
       <div className="stat-card-value">{value}</div>
       {sub && <div className="stat-card-sub">{sub}</div>}
@@ -38,10 +49,10 @@ export function PageHeader({ title, subtitle, actions, back }) {
 
 export function SectionHeader({ title, subtitle, actions }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-3)' }}>
+    <div className="section-header">
       <div>
-        <h2 style={{ fontSize: 'var(--font-size-md)', fontWeight: 600, color: 'var(--text-primary)' }}>{title}</h2>
-        {subtitle && <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>{subtitle}</p>}
+        <h2 className="section-title">{title}</h2>
+        {subtitle && <p className="section-subtitle">{subtitle}</p>}
       </div>
       {actions && <div>{actions}</div>}
     </div>
@@ -63,7 +74,7 @@ export function LoadingRows({ cols = 5, rows = 5 }) {
     <tr key={i}>
       {Array.from({ length: cols }).map((_, j) => (
         <td key={j}>
-          <div className="skeleton-line" style={{ width: j === 0 ? '80%' : '60%', margin: 0 }} />
+          <div className="skeleton-line" style={{ width: j === 0 ? '75%' : '50%', margin: 0 }} />
         </td>
       ))}
     </tr>
@@ -72,9 +83,9 @@ export function LoadingRows({ cols = 5, rows = 5 }) {
 
 export function LoadingCards({ count = 4 }) {
   return Array.from({ length: count }).map((_, i) => (
-    <div key={i} className="data-card">
-      <div className="skeleton-line" style={{ width: '60%', marginBottom: 8 }} />
-      <div className="skeleton-line" style={{ width: '40%' }} />
+    <div key={i} className="card" style={{ marginBottom: 12 }}>
+      <div className="skeleton-line" style={{ width: '40%', marginBottom: 10, height: 16 }} />
+      <div className="skeleton-line" style={{ width: '65%', height: 12 }} />
     </div>
   ));
 }
@@ -87,7 +98,8 @@ export function Avatar({ name, size = 32 }) {
       background: 'var(--bg-subtle)', color: 'var(--text-secondary)',
       fontSize: size * 0.4, fontWeight: 700,
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-      border: '1px solid var(--border-subtle)'
+      border: '1px solid var(--border-subtle)',
+      flexShrink: 0
     }}>
       {initials}
     </div>
@@ -98,15 +110,15 @@ export function ConfirmDialog({ open, title, message, onConfirm, onCancel, dange
   if (!open) return null;
   return (
     <div className="modal-backdrop" onClick={onCancel}>
-      <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+      <div className="modal" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h3>{title}</h3>
         </div>
         <div className="modal-body">
-          <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)' }}>{message}</p>
+          <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{message}</p>
         </div>
         <div className="modal-footer">
-          <button className="btn btn-secondary btn-sm" onClick={onCancel}>Cancel</button>
+          <button className="btn btn-secondary btn-sm" onClick={onCancel} disabled={loading}>Cancel</button>
           <button
             className={`btn ${danger ? 'btn-danger' : 'btn-primary'} btn-sm`}
             onClick={onConfirm}
@@ -168,19 +180,41 @@ export function Pagination({ page, total, limit, onPageChange }) {
 
   return (
     <div className="pagination">
-      <span>Showing {from}–{to} of {total}</span>
+      <span>Showing <strong>{from}–{to}</strong> of <strong>{total}</strong></span>
       <div className="pagination-controls">
         <button
           className="btn btn-secondary btn-sm"
           disabled={page <= 1}
           onClick={() => onPageChange(page - 1)}
         >← Prev</button>
+        <span style={{ padding: '0 4px', fontWeight: 600 }}>{page} / {totalPages || 1}</span>
         <button
           className="btn btn-secondary btn-sm"
           disabled={page >= totalPages}
           onClick={() => onPageChange(page + 1)}
         >Next →</button>
       </div>
+    </div>
+  );
+}
+
+export function WorkflowPipeline({ steps, currentStep }) {
+  const currentIndex = steps.findIndex(s => s.id === currentStep);
+  return (
+    <div className="workflow-pipeline">
+      {steps.map((step, i) => {
+        const isDone = i < currentIndex;
+        const isCurrent = i === currentIndex;
+        return (
+          <div
+            key={step.id}
+            className={`workflow-step ${isDone ? 'completed' : ''} ${isCurrent ? 'current' : ''}`}
+          >
+            <span>{isDone ? '✓' : `${i + 1}.`}</span>
+            <span>{step.label}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }

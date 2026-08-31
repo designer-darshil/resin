@@ -72,69 +72,67 @@ export default function GlobalSearch({ isOpen, onClose }) {
   const hasResults = results && results.total > 0;
 
   return (
-    <div className="search-modal-overlay" onClick={onClose} style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
-      backdropFilter: 'blur(4px)', zIndex: 9999, display: 'flex',
-      alignItems: 'flex-start', justifyContent: 'center', paddingTop: '10vh'
-    }}>
-      <div className="search-modal" onClick={e => e.stopPropagation()} style={{
-        background: 'var(--color-surface, #1e1e24)', border: '1px solid var(--color-border, #333)',
-        borderRadius: 12, width: '90%', maxWidth: 640, boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
-        overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '75vh'
-      }}>
+    <div className="modal-backdrop" onClick={onClose} style={{ paddingTop: '8vh', alignItems: 'flex-start' }}>
+      <div
+        className="modal"
+        onClick={e => e.stopPropagation()}
+        style={{ maxWidth: 640, borderRadius: 'var(--radius-lg)' }}
+      >
         {/* Input Header */}
         <div style={{
-          display: 'flex', alignItems: 'center', padding: '14px 18px',
-          borderBottom: '1px solid var(--color-border, #333)', gap: 12
+          display: 'flex', alignItems: 'center', padding: '12px 16px',
+          borderBottom: '1px solid var(--border-subtle)', gap: 10
         }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted, #888)" strokeWidth="2">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2">
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
           </svg>
           <input
             ref={inputRef}
-            className="search-input"
             style={{
               flex: 1, background: 'transparent', border: 'none', outline: 'none',
-              fontSize: 16, color: 'var(--color-text, #fff)'
+              fontSize: 15, color: 'var(--text-primary)', fontFamily: 'var(--font-family)'
             }}
-            placeholder="Search suppliers, buyers, jobs (JOB-1024), purchases, dispatches..."
+            placeholder="Search suppliers, buyers, jobs (JOB-1024), purchases, dispatches…"
             value={query}
             onChange={handleInputChange}
           />
-          {loading && <div className="spinner-sm" />}
+          {loading && (
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Searching…</span>
+          )}
           <kbd style={{
-            fontSize: 11, background: 'var(--color-bg, #121216)', padding: '3px 6px',
-            borderRadius: 4, color: 'var(--color-text-muted, #888)', border: '1px solid var(--color-border, #333)'
+            fontSize: 10, background: 'var(--bg-subtle)', padding: '2px 5px',
+            borderRadius: 4, color: 'var(--text-muted)', border: '1px solid var(--border-strong)',
+            fontFamily: 'var(--font-mono)'
           }}>ESC</kbd>
         </div>
 
         {/* Results Body */}
-        <div style={{ overflowY: 'auto', padding: '12px 16px' }}>
+        <div style={{ overflowY: 'auto', padding: '12px 16px', maxHeight: '60vh' }}>
           {!query && (
-            <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--color-text-muted, #888)', fontSize: 13 }}>
-              Type at least 2 characters to search across all records...
+            <div style={{ padding: '28px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+              Type at least 2 characters to search jobs, stock, parties, purchases…
             </div>
           )}
 
           {query && !loading && (!results || results.total === 0) && (
-            <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--color-text-muted, #888)' }}>
-              No results found for "<strong>{query}</strong>"
+            <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+              No operational records match "<strong>{query}</strong>"
             </div>
           )}
 
           {hasResults && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {/* Suppliers */}
               {results.results.suppliers?.length > 0 && (
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', color: 'var(--color-primary, #60a5fa)', marginBottom: 6 }}>
-                    SUPPLIERS ({results.results.suppliers.length})
+                  <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--color-primary)', textTransform: 'uppercase', marginBottom: 4 }}>
+                    Suppliers ({results.results.suppliers.length})
                   </div>
                   {results.results.suppliers.map(s => (
                     <div key={s.id} onClick={() => handleSelect(`/suppliers/${s.id}`)} className="search-result-row">
-                      <span className="tag" style={{ marginRight: 8 }}>{s.party_code}</span>
-                      <strong style={{ color: 'var(--color-text, #fff)' }}>{s.company_name}</strong>
-                      <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--color-text-muted, #888)' }}>{s.phone || 'Supplier'}</span>
+                      <span className="badge badge-accent" style={{ marginRight: 8 }}>{s.party_code}</span>
+                      <strong style={{ color: 'var(--text-primary)', fontSize: 13 }}>{s.company_name}</strong>
+                      <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-secondary)' }}>{s.phone || 'Supplier'}</span>
                     </div>
                   ))}
                 </div>
@@ -143,14 +141,14 @@ export default function GlobalSearch({ isOpen, onClose }) {
               {/* Customers / Buyers */}
               {results.results.customers?.length > 0 && (
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', color: 'var(--color-primary, #60a5fa)', marginBottom: 6 }}>
-                    CUSTOMERS / BUYERS ({results.results.customers.length})
+                  <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--color-primary)', textTransform: 'uppercase', marginBottom: 4 }}>
+                    Customers / Buyers ({results.results.customers.length})
                   </div>
                   {results.results.customers.map(c => (
                     <div key={c.id} onClick={() => handleSelect(`/customers/${c.id}`)} className="search-result-row">
-                      <span className="tag" style={{ marginRight: 8 }}>{c.party_code}</span>
-                      <strong style={{ color: 'var(--color-text, #fff)' }}>{c.company_name}</strong>
-                      <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--color-text-muted, #888)' }}>{c.phone || 'Customer'}</span>
+                      <span className="badge badge-neutral" style={{ marginRight: 8 }}>{c.party_code}</span>
+                      <strong style={{ color: 'var(--text-primary)', fontSize: 13 }}>{c.company_name}</strong>
+                      <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-secondary)' }}>{c.phone || 'Buyer'}</span>
                     </div>
                   ))}
                 </div>
@@ -159,14 +157,14 @@ export default function GlobalSearch({ isOpen, onClose }) {
               {/* Coating Jobs */}
               {results.results.jobs?.length > 0 && (
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', color: '#10b981', marginBottom: 6 }}>
-                    COATING JOBS ({results.results.jobs.length})
+                  <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--status-info)', textTransform: 'uppercase', marginBottom: 4 }}>
+                    Coating Jobs ({results.results.jobs.length})
                   </div>
                   {results.results.jobs.map(j => (
                     <div key={j.id} onClick={() => handleSelect(`/coating-jobs/${j.id}`)} className="search-result-row">
-                      <span className="tag" style={{ marginRight: 8 }}>{j.job_code}</span>
-                      <span style={{ color: 'var(--color-text, #fff)' }}>{j.customer_name || 'No party'}</span>
-                      <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--color-text-muted, #888)', textTransform: 'capitalize' }}>
+                      <span className="badge badge-info" style={{ marginRight: 8 }}>{j.job_code}</span>
+                      <span style={{ color: 'var(--text-primary)', fontSize: 13 }}>{j.customer_name || 'In-House'}</span>
+                      <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-secondary)', textTransform: 'capitalize' }}>
                         {j.job_status.replace('_', ' ')} · {j.input_quantity} pcs
                       </span>
                     </div>
@@ -177,14 +175,14 @@ export default function GlobalSearch({ isOpen, onClose }) {
               {/* Purchases */}
               {results.results.purchases?.length > 0 && (
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', color: '#f59e0b', marginBottom: 6 }}>
-                    PURCHASES ({results.results.purchases.length})
+                  <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--status-warning)', textTransform: 'uppercase', marginBottom: 4 }}>
+                    Purchases ({results.results.purchases.length})
                   </div>
                   {results.results.purchases.map(p => (
                     <div key={p.id} onClick={() => handleSelect(`/purchases/${p.id}`)} className="search-result-row">
-                      <span className="tag" style={{ marginRight: 8 }}>{p.purchase_code}</span>
-                      <span style={{ color: 'var(--color-text, #fff)' }}>{p.supplier_name}</span>
-                      <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--color-text-muted, #888)' }}>
+                      <span className="badge badge-warning" style={{ marginRight: 8 }}>{p.purchase_code}</span>
+                      <span style={{ color: 'var(--text-primary)', fontSize: 13 }}>{p.supplier_name}</span>
+                      <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
                         {fmtCurrency(p.total_amount)}
                       </span>
                     </div>
@@ -195,14 +193,14 @@ export default function GlobalSearch({ isOpen, onClose }) {
               {/* Dispatches */}
               {results.results.dispatches?.length > 0 && (
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', color: '#8b5cf6', marginBottom: 6 }}>
-                    DISPATCHES ({results.results.dispatches.length})
+                  <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--status-success)', textTransform: 'uppercase', marginBottom: 4 }}>
+                    Dispatches ({results.results.dispatches.length})
                   </div>
                   {results.results.dispatches.map(d => (
                     <div key={d.id} onClick={() => handleSelect(`/dispatch`)} className="search-result-row">
-                      <span className="tag" style={{ marginRight: 8 }}>{d.dispatch_code}</span>
-                      <span style={{ color: 'var(--color-text, #fff)' }}>{d.customer_name}</span>
-                      <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--color-text-muted, #888)' }}>
+                      <span className="badge badge-success" style={{ marginRight: 8 }}>{d.dispatch_code}</span>
+                      <span style={{ color: 'var(--text-primary)', fontSize: 13 }}>{d.customer_name}</span>
+                      <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-secondary)' }}>
                         {d.quantity} pcs · {fmtDate(d.dispatch_date)}
                       </span>
                     </div>
@@ -213,14 +211,14 @@ export default function GlobalSearch({ isOpen, onClose }) {
               {/* Employees */}
               {results.results.employees?.length > 0 && (
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', color: '#ec4899', marginBottom: 6 }}>
-                    EMPLOYEES ({results.results.employees.length})
+                  <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--status-neutral)', textTransform: 'uppercase', marginBottom: 4 }}>
+                    Employees ({results.results.employees.length})
                   </div>
                   {results.results.employees.map(e => (
                     <div key={e.id} onClick={() => handleSelect(`/employees/${e.id}`)} className="search-result-row">
-                      <span className="tag" style={{ marginRight: 8 }}>{e.employee_code}</span>
-                      <strong style={{ color: 'var(--color-text, #fff)' }}>{e.full_name}</strong>
-                      <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--color-text-muted, #888)' }}>
+                      <span className="badge badge-neutral" style={{ marginRight: 8 }}>{e.employee_code}</span>
+                      <strong style={{ color: 'var(--text-primary)', fontSize: 13 }}>{e.full_name}</strong>
+                      <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-secondary)' }}>
                         {e.designation || e.department || 'Employee'}
                       </span>
                     </div>
@@ -233,12 +231,12 @@ export default function GlobalSearch({ isOpen, onClose }) {
 
         {/* Footer info */}
         <div style={{
-          padding: '8px 16px', background: 'var(--color-bg, #121216)',
-          borderTop: '1px solid var(--color-border, #333)', fontSize: 11,
-          color: 'var(--color-text-muted, #888)', display: 'flex', justifyContent: 'space-between'
+          padding: '8px 16px', background: 'var(--bg-subtle)',
+          borderTop: '1px solid var(--border-subtle)', fontSize: 11,
+          color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between'
         }}>
-          <span>Navigate with mouse or Tab</span>
-          <span>Pro tip: Press <strong>Cmd+K</strong> anywhere</span>
+          <span>Press <strong>ESC</strong> to close</span>
+          <span>Shortcut: <strong>⌘K</strong> / <strong>Ctrl+K</strong></span>
         </div>
       </div>
 
@@ -246,13 +244,13 @@ export default function GlobalSearch({ isOpen, onClose }) {
         .search-result-row {
           display: flex;
           align-items: center;
-          padding: 8px 10px;
-          border-radius: 6px;
+          padding: 6px 10px;
+          border-radius: var(--radius-md);
           cursor: pointer;
-          transition: background 0.1s;
+          transition: background 0.1s ease;
         }
         .search-result-row:hover {
-          background: rgba(255, 255, 255, 0.08);
+          background: var(--bg-subtle);
         }
       `}</style>
     </div>

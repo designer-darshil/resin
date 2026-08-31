@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import { useTheme } from '../contexts/ThemeContext.jsx';
 import GlobalSearch from './GlobalSearch.jsx';
 
 const navGroups = [
   {
-    label: 'HOME',
+    label: 'BUSINESS',
     items: [
       { to: '/dashboard', label: 'Dashboard', icon: HomeIcon }
     ]
@@ -33,12 +34,7 @@ const navGroups = [
       { to: '/payments', label: 'Payments', icon: PayIcon, perm: 'payments' },
       { to: '/salary', label: 'Salary', icon: SalaryIcon, perm: 'salary' },
       { to: '/overtime', label: 'Overtime', icon: OTIcon, perm: 'overtime' },
-    ]
-  },
-  {
-    label: 'REPORTS',
-    items: [
-      { to: '/reports', label: 'Reports', icon: ReportIcon, perm: 'reports' }
+      { to: '/advances', label: 'Advances', icon: AdvIcon, perm: 'salary' },
     ]
   },
   {
@@ -48,25 +44,51 @@ const navGroups = [
     ]
   },
   {
-    label: 'ADMIN',
+    label: 'REPORTS',
+    items: [
+      { to: '/reports', label: 'Reports', icon: ReportIcon, perm: 'reports' }
+    ]
+  },
+  {
+    label: 'SYSTEM',
     items: [
       { to: '/admin', label: 'Settings', icon: AdminIcon, adminOnly: true }
     ]
   }
 ];
 
-// Bottom nav (5 most important for mobile)
 const bottomNav = [
   { to: '/dashboard', label: 'Home', icon: HomeIcon },
   { to: '/coating-jobs', label: 'Jobs', icon: JobIcon },
   { to: '/stock', label: 'Stock', icon: StockIcon },
+  { to: '/purchases', label: 'Purchases', icon: PurchaseIcon },
   { to: '/suppliers', label: 'Suppliers', icon: SupplierIcon },
-  { to: '/customers', label: 'Parties', icon: CustomerIcon },
 ];
+
+function getBreadcrumb(pathname) {
+  if (pathname.startsWith('/dashboard')) return 'Dashboard';
+  if (pathname.startsWith('/purchases')) return 'Operations / Purchases';
+  if (pathname.startsWith('/stock')) return 'Operations / Stock';
+  if (pathname.startsWith('/coating-jobs')) return 'Operations / Coating Jobs';
+  if (pathname.startsWith('/dispatch')) return 'Operations / Dispatch';
+  if (pathname.startsWith('/suppliers')) return 'People / Suppliers';
+  if (pathname.startsWith('/customers')) return 'People / Customers & Parties';
+  if (pathname.startsWith('/employees')) return 'People / Employees';
+  if (pathname.startsWith('/payments')) return 'Finance / Payments';
+  if (pathname.startsWith('/salary')) return 'Finance / Salary';
+  if (pathname.startsWith('/overtime')) return 'Finance / Overtime';
+  if (pathname.startsWith('/advances')) return 'Finance / Advances';
+  if (pathname.startsWith('/whatsapp')) return 'Communication / WhatsApp';
+  if (pathname.startsWith('/reports')) return 'Analytics / Reports';
+  if (pathname.startsWith('/admin')) return 'System / Settings';
+  return 'Resin Operations';
+}
 
 export default function AppShell({ children }) {
   const { user, logout, hasPermission, isAdmin } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
@@ -80,44 +102,28 @@ export default function AppShell({ children }) {
     navigate('/login');
   };
 
+  const breadcrumb = getBreadcrumb(location.pathname);
+
   return (
     <div className="app-layout">
       {/* Global Search Modal */}
       <GlobalSearch isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
 
-      {/* Sidebar Overlay (mobile) */}
+      {/* Sidebar Overlay (Mobile) */}
       {sidebarOpen && (
-        <div className="sidebar-overlay visible" onClick={() => setSidebarOpen(false)} />
+        <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
       )}
 
       {/* Sidebar */}
-      <nav className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-logo">
-          <h1>💎 Resin</h1>
-          <p>Operations Manager</p>
+          <h1>
+            <span style={{ color: 'var(--color-primary)' }}>◆</span> Resin ERP
+          </h1>
+          <p>Diamond Coating Ops</p>
         </div>
 
-        {/* Search Bar Button in Sidebar */}
-        <div style={{ padding: '0 12px', marginBottom: 12 }}>
-          <button
-            onClick={() => setSearchOpen(true)}
-            style={{
-              width: '100%', display: 'flex', alignItems: 'center', gap: 8,
-              padding: '8px 12px', background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6,
-              color: 'var(--sidebar-text)', cursor: 'pointer', fontSize: 13,
-              textAlign: 'left'
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-            </svg>
-            <span style={{ flex: 1, opacity: 0.8 }}>Search (Jobs, Stock)...</span>
-            <kbd style={{ fontSize: 10, background: 'rgba(0,0,0,0.3)', padding: '2px 4px', borderRadius: 3, border: '1px solid rgba(255,255,255,0.1)' }}>⌘K</kbd>
-          </button>
-        </div>
-
-        <div className="sidebar-nav">
+        <nav className="sidebar-nav">
           {navGroups.map(group => {
             const filteredItems = group.items.filter(n =>
               (!n.perm || hasPermission(n.perm)) && (!n.adminOnly || isAdmin)
@@ -126,7 +132,7 @@ export default function AppShell({ children }) {
             if (filteredItems.length === 0) return null;
 
             return (
-              <div key={group.label} style={{ marginBottom: 16 }}>
+              <div key={group.label}>
                 <div className="sidebar-section-label">{group.label}</div>
                 {filteredItems.map(({ to, label, icon: Icon }) => (
                   <NavLink
@@ -136,60 +142,100 @@ export default function AppShell({ children }) {
                     onClick={() => setSidebarOpen(false)}
                   >
                     <Icon className="icon" />
-                    {label}
+                    <span>{label}</span>
                   </NavLink>
                 ))}
               </div>
             );
           })}
-        </div>
+        </nav>
 
         <div className="sidebar-footer">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 8px', marginBottom: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 8px 10px' }}>
             <div style={{
-              width: 30, height: 30, borderRadius: '50%', background: 'var(--sidebar-active-bg)',
+              width: 32, height: 32, borderRadius: 'var(--radius-md)',
+              background: 'var(--bg-subtle)', border: '1px solid var(--border-strong)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 12, fontWeight: 700, color: '#fff', flexShrink: 0
+              fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', flexShrink: 0
             }}>
               {user?.full_name?.[0] || 'U'}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, color: '#fff', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {user?.full_name || user?.username}
               </div>
-              <div style={{ fontSize: 11, color: 'var(--sidebar-section-text)', textTransform: 'capitalize' }}>
-                {user?.role_name}
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'capitalize' }}>
+                {user?.role_name || 'Operator'}
               </div>
             </div>
           </div>
           <button
-            className="sidebar-link"
+            className="btn btn-secondary btn-sm"
             onClick={handleLogout}
-            style={{ width: '100%', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--sidebar-text)', display: 'flex', alignItems: 'center', gap: 10 }}
+            style={{ width: '100%', justifyContent: 'center' }}
           >
             <LogoutIcon className="icon" />
-            Sign Out
+            <span>Sign Out</span>
           </button>
         </div>
-      </nav>
+      </aside>
 
-      {/* Main Content */}
+      {/* Main Content Area */}
       <div className="main-content">
-        {/* Mobile Header */}
+        {/* Desktop Top Header */}
+        <header className="top-header">
+          <div className="top-header-left">
+            <span className="top-header-breadcrumb">
+              <strong>{breadcrumb}</strong>
+            </span>
+          </div>
+
+          <div className="top-header-right">
+            <button className="top-search-btn" onClick={() => setSearchOpen(true)}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+              <span>Search jobs, stock, suppliers…</span>
+              <kbd>⌘K</kbd>
+            </button>
+
+            {/* Dark / Light Mode Toggle Button */}
+            <button
+              className="theme-toggle-btn"
+              onClick={toggleTheme}
+              title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+              aria-label="Toggle theme mode"
+            >
+              {theme === 'dark' ? (
+                <SunIcon />
+              ) : (
+                <MoonIcon />
+              )}
+            </button>
+          </div>
+        </header>
+
+        {/* Mobile Top Header */}
         <header className="mobile-header">
           <button
-            className="btn btn-ghost btn-icon"
+            className="btn btn-ghost btn-icon btn-sm"
             onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label="Toggle navigation menu"
           >
             <MenuIcon />
           </button>
-          <h2>💎 Resin</h2>
-          <div style={{ display: 'flex', gap: 4 }}>
-            <button className="btn btn-ghost btn-icon" onClick={() => setSearchOpen(true)}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <h2>Resin ERP</h2>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <button
+              className="theme-toggle-btn"
+              style={{ width: 28, height: 28 }}
+              onClick={toggleTheme}
+              aria-label="Toggle theme mode"
+            >
+              {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
             </button>
-            <button className="btn btn-ghost btn-icon" onClick={handleLogout}>
-              <LogoutIcon />
+            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setSearchOpen(true)} aria-label="Search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
             </button>
           </div>
         </header>
@@ -200,7 +246,7 @@ export default function AppShell({ children }) {
         </main>
       </div>
 
-      {/* Bottom Navigation */}
+      {/* Bottom Navigation for Mobile */}
       <nav className="bottom-nav">
         <div className="bottom-nav-items">
           {bottomNav.map(({ to, label, icon: Icon }) => (
@@ -215,7 +261,31 @@ export default function AppShell({ children }) {
   );
 }
 
-/* ---- SVG Icons ---- */
+/* ---- SVGs ---- */
+function SunIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="5"/>
+      <line x1="12" y1="1" x2="12" y2="3"/>
+      <line x1="12" y1="21" x2="12" y2="23"/>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="1" y1="12" x2="3" y2="12"/>
+      <line x1="21" y1="12" x2="23" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </svg>
+  );
+}
+
 function HomeIcon({ className }) {
   return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>;
 }
@@ -229,7 +299,7 @@ function StockIcon({ className }) {
   return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>;
 }
 function JobIcon({ className }) {
-  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.5 10c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5z"/><path d="M20.5 10H19V8.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/><path d="M9.5 14c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5S8 21.33 8 20.5v-5c0-.83.67-1.5 1.5-1.5z"/><path d="M3.5 14H5v1.5c0 .83-.67 1.5-1.5 1.5S2 16.33 2 15.5 2.67 14 3.5 14z"/><path d="M14 14.5c0-.83.67-1.5 1.5-1.5h5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-5c-.83 0-1.5-.67-1.5-1.5z"/><path d="M15.5 9H14V7.5"/><path d="M10 9.5c0 .83-.67 1.5-1.5 1.5H3c-.83 0-1.5-.67-1.5-1.5S2.17 8 3 8h5.5c.83 0 1.5.67 1.5 1.5z"/><path d="M8.5 15H10v1.5"/></svg>;
+  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>;
 }
 function CustomerIcon({ className }) {
   return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
@@ -244,7 +314,7 @@ function SalaryIcon({ className }) {
   return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>;
 }
 function WAIcon({ className }) {
-  return <svg className={className} viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.115.547 4.103 1.508 5.833L0 24l6.337-1.491A11.938 11.938 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.6a9.548 9.548 0 0 1-4.879-1.337l-.35-.208-3.619.851.886-3.523-.228-.363A9.547 9.547 0 0 1 2.4 12c0-5.292 4.308-9.6 9.6-9.6s9.6 4.308 9.6 9.6-4.308 9.6-9.6 9.6z"/></svg>;
+  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>;
 }
 function ReportIcon({ className }) {
   return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>;
@@ -259,11 +329,11 @@ function AdvIcon({ className }) {
   return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>;
 }
 function AdminIcon({ className }) {
-  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="4"/><path d="M12 14c-5 0-8 2.5-8 4v1h16v-1c0-1.5-3-4-8-4z"/><path d="M18 2l2 2-8 8-4-4 2-2 2 2z"/></svg>;
+  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
 }
 function LogoutIcon({ className }) {
-  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
+  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
 }
 function MenuIcon() {
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>;
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>;
 }

@@ -13,7 +13,7 @@ export default function SupplierDetail() {
   const { hasPermission } = useAuth();
   const [supplier, setSupplier] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('purchases');
+  const [activeTab, setActiveTab] = useState('overview');
   const [showEditModal, setShowEditModal] = useState(false);
   const [showPayModal, setShowPayModal] = useState(false);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
@@ -67,7 +67,7 @@ export default function SupplierDetail() {
     setSaving(true);
     try {
       await paymentsApi.create({ ...payForm, customer_id: id, payment_direction: 'paid' });
-      toast.success('Payment to supplier recorded');
+      toast.success('Payment recorded');
       setShowPayModal(false);
       setPayForm({ amount: '', payment_method: 'bank', payment_date: today(), notes: '', reference_number: '' });
       load();
@@ -113,7 +113,6 @@ export default function SupplierDetail() {
     if (!phone) { toast.error('No phone number available'); return; }
 
     try {
-      // Try backend Evolution Go send first
       const res = await fetch('/api/evolution/send', {
         method: 'POST',
         headers: {
@@ -128,11 +127,9 @@ export default function SupplierDetail() {
           entity_id: id
         })
       });
-      const data = await res.json();
       if (res.ok) {
-        toast.success('WhatsApp message sent successfully');
+        toast.success('WhatsApp message sent');
       } else {
-        // Fallback to wa.me
         const num = phone.replace(/[^0-9]/g, '');
         const fullNum = num.startsWith('91') ? num : `91${num}`;
         window.open(`https://wa.me/${fullNum}?text=${encodeURIComponent(customMessage)}`, '_blank');
@@ -148,341 +145,405 @@ export default function SupplierDetail() {
     setCustomMessage('');
   };
 
-  if (loading) return <div className="page"><div className="skeleton skeleton-line" style={{ height: 32, width: 300, marginBottom: 16 }} /></div>;
+  if (loading) return (
+    <div className="page">
+      <div className="skeleton-line" style={{ height: 28, width: 240, marginBottom: 12 }} />
+      <div className="skeleton-line" style={{ height: 90, marginBottom: 20 }} />
+    </div>
+  );
   if (!supplier) return null;
 
   const totalPurchased = (supplier.purchases || []).reduce((sum, p) => sum + (p.total_amount || 0), 0);
   const totalPaid = supplier.total_paid || 0;
   const outstanding = (supplier.opening_balance || 0) + totalPurchased - totalPaid;
+  const activeStockPcs = (supplier.stock || []).reduce((sum, s) => sum + (s.raw_quantity || 0), 0);
 
   return (
     <div className="page">
+      {/* Breadcrumb Navigation */}
       <div className="breadcrumb">
         <Link to="/suppliers">Suppliers</Link>
-        <span className="breadcrumb-sep">›</span>
-        <span className="breadcrumb-current">{supplier.company_name}</span>
+        <span>/</span>
+        <strong>{supplier.company_name}</strong>
       </div>
 
-      <PageHeader
-        title={supplier.company_name}
-        subtitle={`${supplier.party_code} · Diamond Supplier`}
-        actions={<>
-          <button className="btn btn-secondary" onClick={() => setShowEditModal(true)}>Edit Supplier</button>
-          <button className="btn btn-secondary" onClick={() => setShowPayModal(true)}>Record Payment</button>
-          <button className="btn btn-primary" onClick={() => setShowPurchaseModal(true)}>+ New Purchase</button>
-          {(supplier.whatsapp_number || supplier.phone) && (
-            <button className="btn btn-whatsapp" onClick={() => setShowWhatsAppModal(true)}>📱 WhatsApp</button>
-          )}
-        </>}
-      />
+      {/* Supplier Profile Header */}
+      <div className="page-header">
+        <div className="page-header-left">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <h1 className="page-title">{supplier.company_name}</h1>
+            <span className="badge badge-accent">{supplier.party_code}</span>
+            <span className="badge badge-neutral">Supplier</span>
+          </div>
+          <p className="page-subtitle">
+            Contact: {supplier.contact_person || '—'} · {supplier.phone || 'No phone'}
+          </p>
+        </div>
 
-      {/* Overview Stat Strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
-        <div className="stat-card">
-          <div className="stat-card-label">Total Purchases</div>
-          <div className="stat-card-value">{fmtCurrency(totalPurchased)}</div>
-          <div className="stat-card-sub">{supplier.purchases?.length || 0} orders</div>
+        <div className="page-header-actions">
+          {supplier.phone && (
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => window.open(`tel:${supplier.phone}`)}
+            >
+              📞 Call
+            </button>
+          )}
+          {(supplier.whatsapp_number || supplier.phone) && (
+            <button className="btn btn-whatsapp btn-sm" onClick={() => setShowWhatsAppModal(true)}>
+              WhatsApp
+            </button>
+          )}
+          <button className="btn btn-secondary btn-sm" onClick={() => setShowEditModal(true)}>
+            Edit Details
+          </button>
+          <button className="btn btn-secondary btn-sm" onClick={() => setShowPayModal(true)}>
+            Record Payment
+          </button>
+          <button className="btn btn-primary btn-sm" onClick={() => setShowPurchaseModal(true)}>
+            + New Purchase
+          </button>
         </div>
-        <div className="stat-card">
-          <div className="stat-card-label">Total Paid</div>
-          <div className="stat-card-value text-success">{fmtCurrency(totalPaid)}</div>
-          <div className="stat-card-sub">Recorded payments</div>
+      </div>
+
+      {/* Financial Snapshot Strip */}
+      <div className="stat-strip">
+        <div className="stat-strip-item">
+          <div className="stat-strip-label">Total Purchased</div>
+          <div className="stat-strip-value">{fmtCurrency(totalPurchased)}</div>
+          <div className="stat-strip-sub">{supplier.purchases?.length || 0} purchase orders</div>
         </div>
-        <div className="stat-card">
-          <div className="stat-card-label">Outstanding Balance</div>
-          <div className="stat-card-value text-error">{fmtCurrency(outstanding)}</div>
-          <div className="stat-card-sub">Payable amount</div>
+        <div className="stat-strip-item">
+          <div className="stat-strip-label">Total Paid</div>
+          <div className="stat-strip-value" style={{ color: 'var(--status-success)' }}>
+            {fmtCurrency(totalPaid)}
+          </div>
+          <div className="stat-strip-sub">Settled ledger</div>
         </div>
-        <div className="stat-card">
-          <div className="stat-card-label">Phone &amp; Contact</div>
-          <div className="stat-card-value" style={{ fontSize: 16 }}>{supplier.phone || '—'}</div>
-          <div className="stat-card-sub">{supplier.contact_person || 'No contact person'}</div>
+        <div className="stat-strip-item">
+          <div className="stat-strip-label">Outstanding Balance</div>
+          <div className="stat-strip-value" style={{ color: outstanding > 0 ? 'var(--status-error)' : 'inherit' }}>
+            {fmtCurrency(outstanding)}
+          </div>
+          <div className="stat-strip-sub">Payable amount</div>
+        </div>
+        <div className="stat-strip-item">
+          <div className="stat-strip-label">Active Raw Stock</div>
+          <div className="stat-strip-value" style={{ color: 'var(--color-primary)' }}>
+            {fmtQty(activeStockPcs)} pcs
+          </div>
+          <div className="stat-strip-sub">Available for coating</div>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="tabs">
-        {['purchases','payments','info'].map(t => (
-          <button key={t} className={`tab ${activeTab === t ? 'active' : ''}`} onClick={() => setActiveTab(t)}>
-            {t === 'purchases' ? 'Purchases History' : t === 'payments' ? 'Payment History' : 'Supplier Info'}
-          </button>
-        ))}
+        <button className={`tab ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')}>
+          Overview
+        </button>
+        <button className={`tab ${activeTab === 'purchases' ? 'active' : ''}`} onClick={() => setActiveTab('purchases')}>
+          Purchases ({supplier.purchases?.length || 0})
+        </button>
+        <button className={`tab ${activeTab === 'stock' ? 'active' : ''}`} onClick={() => setActiveTab('stock')}>
+          Stock Inventory ({supplier.stock?.length || 0})
+        </button>
+        <button className={`tab ${activeTab === 'payments' ? 'active' : ''}`} onClick={() => setActiveTab('payments')}>
+          Payments
+        </button>
+        <button className={`tab ${activeTab === 'whatsapp' ? 'active' : ''}`} onClick={() => setActiveTab('whatsapp')}>
+          WhatsApp Messages
+        </button>
       </div>
 
-      {/* Tab 1: Purchases */}
+      {/* Tab: Overview */}
+      {activeTab === 'overview' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1fr) minmax(320px, 1.4fr)', gap: 'var(--space-6)' }}>
+          <div className="panel">
+            <div className="form-section-title" style={{ marginTop: 0 }}>Supplier Information</div>
+            <div className="data-row">
+              <span className="data-row-label">Company Name</span>
+              <span className="data-row-value">{supplier.company_name}</span>
+            </div>
+            <div className="data-row">
+              <span className="data-row-label">Party Code</span>
+              <span className="data-row-value" style={{ fontFamily: 'var(--font-mono)' }}>{supplier.party_code}</span>
+            </div>
+            <div className="data-row">
+              <span className="data-row-label">Contact Person</span>
+              <span className="data-row-value">{supplier.contact_person || '—'}</span>
+            </div>
+            <div className="data-row">
+              <span className="data-row-label">Phone</span>
+              <span className="data-row-value">{supplier.phone || '—'}</span>
+            </div>
+            <div className="data-row">
+              <span className="data-row-label">WhatsApp</span>
+              <span className="data-row-value">{supplier.whatsapp_number || '—'}</span>
+            </div>
+            <div className="data-row">
+              <span className="data-row-label">Email</span>
+              <span className="data-row-value">{supplier.email || '—'}</span>
+            </div>
+            <div className="data-row">
+              <span className="data-row-label">GST / Tax ID</span>
+              <span className="data-row-value">{supplier.gst_number || '—'}</span>
+            </div>
+            <div className="data-row">
+              <span className="data-row-label">Address</span>
+              <span className="data-row-value">{supplier.address || '—'}</span>
+            </div>
+          </div>
+
+          <div className="panel">
+            <div className="form-section-title" style={{ marginTop: 0 }}>Recent Purchases</div>
+            <div className="table-wrapper" style={{ border: 'none', boxShadow: 'none', margin: 0 }}>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Date</th>
+                    <th className="num-col">Items</th>
+                    <th className="num-col">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(supplier.purchases || []).slice(0, 5).map(p => (
+                    <tr key={p.id} onClick={() => navigate(`/purchases/${p.id}`)} style={{ cursor: 'pointer' }}>
+                      <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--color-primary)' }}>
+                        {p.purchase_code}
+                      </td>
+                      <td>{fmtDate(p.purchase_date)}</td>
+                      <td className="num-col">{p.item_count || 1}</td>
+                      <td className="num-col" style={{ fontWeight: 600 }}>{fmtCurrency(p.total_amount)}</td>
+                    </tr>
+                  ))}
+                  {(!supplier.purchases || supplier.purchases.length === 0) && (
+                    <tr>
+                      <td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '20px' }}>
+                        No purchase records yet.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab: Purchases */}
       {activeTab === 'purchases' && (
         <div className="table-wrapper">
           <table className="data-table">
             <thead>
               <tr>
-                <th>Code</th>
+                <th>Purchase Code</th>
                 <th>Date</th>
-                <th>Invoice</th>
-                <th>Total Amount</th>
+                <th>Invoice Ref</th>
+                <th className="num-col">Items</th>
+                <th className="num-col">Total Amount</th>
                 <th>Status</th>
-                <th className="col-actions">Actions</th>
               </tr>
             </thead>
             <tbody>
               {(supplier.purchases || []).map(p => (
-                <tr key={p.id}>
-                  <td><span className="tag">{p.purchase_code}</span></td>
-                  <td>{fmtDate(p.purchase_date)}</td>
-                  <td className="text-muted">{p.invoice_number || '—'}</td>
-                  <td style={{ fontWeight: 600 }}>{fmtCurrency(p.total_amount)}</td>
-                  <td><StatusBadge status={p.status} /></td>
-                  <td className="col-actions">
-                    <button className="btn btn-secondary btn-sm" onClick={() => navigate(`/purchases/${p.id}`)}>View Details</button>
+                <tr key={p.id} onClick={() => navigate(`/purchases/${p.id}`)} style={{ cursor: 'pointer' }}>
+                  <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--color-primary)' }}>
+                    {p.purchase_code}
                   </td>
+                  <td>{fmtDate(p.purchase_date)}</td>
+                  <td>{p.invoice_number || '—'}</td>
+                  <td className="num-col">{p.item_count || 1}</td>
+                  <td className="num-col" style={{ fontWeight: 600 }}>{fmtCurrency(p.total_amount)}</td>
+                  <td><StatusBadge status={p.payment_status || 'completed'} /></td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {(!supplier.purchases || supplier.purchases.length === 0) && (
-            <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-              No purchases recorded yet. Click <strong>+ New Purchase</strong> above.
-            </div>
-          )}
         </div>
       )}
 
-      {/* Tab 2: Payments */}
+      {/* Tab: Stock */}
+      {activeTab === 'stock' && (
+        <div className="table-wrapper">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Diamond Spec</th>
+                <th>Shape / Size</th>
+                <th className="num-col">Raw Pcs</th>
+                <th className="num-col">In Coating</th>
+                <th className="num-col">Finished</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(supplier.stock || []).map(st => (
+                <tr key={st.id}>
+                  <td style={{ fontWeight: 600 }}>{st.diamond_type || 'Diamond'}</td>
+                  <td>{st.shape || 'Round'} · {st.size || '—'}</td>
+                  <td className="num-col" style={{ fontWeight: 600 }}>{fmtQty(st.raw_quantity)}</td>
+                  <td className="num-col">{fmtQty(st.in_coating_quantity)}</td>
+                  <td className="num-col">{fmtQty(st.finished_quantity)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Tab: Payments */}
       {activeTab === 'payments' && (
         <div className="table-wrapper">
           <table className="data-table">
             <thead>
               <tr>
-                <th>Code</th>
-                <th>Date</th>
-                <th>Method</th>
+                <th>Payment Date</th>
                 <th>Reference</th>
-                <th>Amount Paid</th>
+                <th>Method</th>
+                <th className="num-col">Amount Paid</th>
                 <th>Notes</th>
               </tr>
             </thead>
             <tbody>
-              {(supplier.payments || []).map(p => (
-                <tr key={p.id}>
-                  <td><span className="tag">{p.payment_code}</span></td>
-                  <td>{fmtDate(p.payment_date)}</td>
-                  <td className="text-capitalize">{p.payment_method}</td>
-                  <td>{p.reference_number || '—'}</td>
-                  <td style={{ fontWeight: 600, color: 'var(--color-success)' }}>{fmtCurrency(p.amount)}</td>
-                  <td className="text-muted">{p.notes || '—'}</td>
+              {(supplier.payments || []).map(pay => (
+                <tr key={pay.id}>
+                  <td>{fmtDate(pay.payment_date)}</td>
+                  <td style={{ fontFamily: 'var(--font-mono)' }}>{pay.reference_number || '—'}</td>
+                  <td style={{ textTransform: 'capitalize' }}>{pay.payment_method}</td>
+                  <td className="num-col" style={{ fontWeight: 600, color: 'var(--status-success)' }}>
+                    {fmtCurrency(pay.amount)}
+                  </td>
+                  <td style={{ color: 'var(--text-secondary)' }}>{pay.notes || '—'}</td>
                 </tr>
               ))}
+              {(!supplier.payments || supplier.payments.length === 0) && (
+                <tr>
+                  <td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>
+                    No payment transactions recorded.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
-          {(!supplier.payments || supplier.payments.length === 0) && (
-            <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-              No payments recorded yet. Click <strong>Record Payment</strong> above.
-            </div>
-          )}
         </div>
       )}
 
-      {/* Tab 3: Supplier Info */}
-      {activeTab === 'info' && (
-        <div className="detail-section">
-          <div className="grid-2" style={{ gap: 24 }}>
-            <div>
-              <div className="detail-field">
-                <div className="detail-field-label">Company Name</div>
-                <div className="detail-field-value">{supplier.company_name}</div>
-              </div>
-              <div className="detail-field">
-                <div className="detail-field-label">Contact Person</div>
-                <div className="detail-field-value">{supplier.contact_person || '—'}</div>
-              </div>
-              <div className="detail-field">
-                <div className="detail-field-label">Phone</div>
-                <div className="detail-field-value">{supplier.phone || '—'}</div>
-              </div>
-              <div className="detail-field">
-                <div className="detail-field-label">WhatsApp Number</div>
-                <div className="detail-field-value">{supplier.whatsapp_number || '—'}</div>
-              </div>
-            </div>
-            <div>
-              <div className="detail-field">
-                <div className="detail-field-label">Email</div>
-                <div className="detail-field-value">{supplier.email || '—'}</div>
-              </div>
-              <div className="detail-field">
-                <div className="detail-field-label">GST Number</div>
-                <div className="detail-field-value">{supplier.gst_number || '—'}</div>
-              </div>
-              <div className="detail-field">
-                <div className="detail-field-label">Address</div>
-                <div className="detail-field-value">{supplier.address || '—'}</div>
-              </div>
-              <div className="detail-field">
-                <div className="detail-field-label">Notes</div>
-                <div className="detail-field-value">{supplier.notes || '—'}</div>
-              </div>
-            </div>
+      {/* Tab: WhatsApp */}
+      {activeTab === 'whatsapp' && (
+        <div className="panel">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <span style={{ fontWeight: 600 }}>WhatsApp Communication Log</span>
+            <button className="btn btn-whatsapp btn-sm" onClick={() => setShowWhatsAppModal(true)}>
+              + Send Direct Message
+            </button>
+          </div>
+          <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>
+            All automated purchase confirmations and delivery alerts sent to this supplier are logged in the WhatsApp module.
           </div>
         </div>
       )}
 
-      {/* New Purchase Modal */}
-      <Modal open={showPurchaseModal} onClose={() => setShowPurchaseModal(false)} title={`New Purchase from ${supplier.company_name}`} size="large"
-        footer={<>
-          <button className="btn btn-secondary" onClick={() => setShowPurchaseModal(false)}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleCreatePurchase} disabled={saving}>{saving ? 'Saving…' : 'Create Purchase'}</button>
-        </>}>
-        <form onSubmit={handleCreatePurchase}>
+      {/* Record Payment Modal */}
+      <Modal
+        open={showPayModal}
+        onClose={() => setShowPayModal(false)}
+        title={`Record Payment to ${supplier.company_name}`}
+        footer={
+          <>
+            <button className="btn btn-secondary btn-sm" onClick={() => setShowPayModal(false)}>Cancel</button>
+            <button className="btn btn-primary btn-sm" onClick={handlePayment} disabled={saving}>
+              {saving ? 'Saving…' : 'Record Payment'}
+            </button>
+          </>
+        }
+      >
+        <form onSubmit={handlePayment}>
+          <div className="form-group">
+            <label className="form-label">Payment Amount (₹) *</label>
+            <input
+              className="form-control"
+              type="number"
+              placeholder="e.g. 50000"
+              value={payForm.amount}
+              onChange={e => setPayForm(f => ({ ...f, amount: e.target.value }))}
+              required
+              autoFocus
+            />
+          </div>
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Purchase Date <span className="required">*</span></label>
-              <input className="form-control" type="date" value={purchaseForm.purchase_date} onChange={e => setPurchaseForm(f => ({ ...f, purchase_date: e.target.value }))} />
+              <label className="form-label">Payment Date *</label>
+              <input
+                className="form-control"
+                type="date"
+                value={payForm.payment_date}
+                onChange={e => setPayForm(f => ({ ...f, payment_date: e.target.value }))}
+                required
+              />
             </div>
             <div className="form-group">
-              <label className="form-label">Invoice Number</label>
-              <input className="form-control" value={purchaseForm.invoice_number} onChange={e => setPurchaseForm(f => ({ ...f, invoice_number: e.target.value }))} placeholder="Optional" />
+              <label className="form-label">Payment Mode</label>
+              <select
+                className="form-control"
+                value={payForm.payment_method}
+                onChange={e => setPayForm(f => ({ ...f, payment_method: e.target.value }))}
+              >
+                <option value="bank">Bank Transfer / NEFT / RTGS</option>
+                <option value="cheque">Cheque</option>
+                <option value="cash">Cash</option>
+                <option value="upi">UPI</option>
+              </select>
             </div>
           </div>
-
-          <div className="form-section-title" style={{ marginTop: 16 }}>Diamond Details</div>
-          {purchaseItems.map((item, i) => (
-            <div key={i} style={{ background: 'var(--color-bg)', padding: 12, borderRadius: 8, marginBottom: 10, border: '1px solid var(--color-border)' }}>
-              <div className="form-row-3">
-                <div className="form-group">
-                  <label className="form-label">Diamond Type</label>
-                  <input className="form-control" value={item.diamond_type} onChange={e => {
-                    const val = e.target.value;
-                    setPurchaseItems(prev => prev.map((it, idx) => idx === i ? { ...it, diamond_type: val } : it));
-                  }} placeholder="Natural / Lab" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Shape</label>
-                  <select className="form-control" value={item.shape} onChange={e => {
-                    const val = e.target.value;
-                    setPurchaseItems(prev => prev.map((it, idx) => idx === i ? { ...it, shape: val } : it));
-                  }}>
-                    {['Round','Princess','Oval','Marquise','Pear','Emerald','Asscher','Radiant','Heart','Cushion','Other'].map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Size / Sieve</label>
-                  <input className="form-control" value={item.size} onChange={e => {
-                    const val = e.target.value;
-                    setPurchaseItems(prev => prev.map((it, idx) => idx === i ? { ...it, size: val } : it));
-                  }} placeholder="e.g. +11-15" />
-                </div>
-              </div>
-              <div className="form-row-3">
-                <div className="form-group">
-                  <label className="form-label">Quantity (pcs) <span className="required">*</span></label>
-                  <input className="form-control" type="number" inputMode="numeric" value={item.quantity} onChange={e => {
-                    const val = e.target.value;
-                    setPurchaseItems(prev => prev.map((it, idx) => idx === i ? { ...it, quantity: val } : it));
-                  }} placeholder="Pcs" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Weight (ct)</label>
-                  <input className="form-control" type="number" step="0.001" value={item.weight} onChange={e => {
-                    const val = e.target.value;
-                    setPurchaseItems(prev => prev.map((it, idx) => idx === i ? { ...it, weight: val } : it));
-                  }} placeholder="Carats" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Rate (₹/pc)</label>
-                  <input className="form-control" type="number" value={item.rate} onChange={e => {
-                    const val = e.target.value;
-                    setPurchaseItems(prev => prev.map((it, idx) => idx === i ? { ...it, rate: val } : it));
-                  }} placeholder="Rate" />
-                </div>
-              </div>
-            </div>
-          ))}
+          <div className="form-group">
+            <label className="form-label">Reference Number (UTR / Cheque No)</label>
+            <input
+              className="form-control"
+              placeholder="Optional transaction reference"
+              value={payForm.reference_number}
+              onChange={e => setPayForm(f => ({ ...f, reference_number: e.target.value }))}
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Notes</label>
+            <textarea
+              className="form-textarea"
+              placeholder="Payment remarks"
+              value={payForm.notes}
+              onChange={e => setPayForm(f => ({ ...f, notes: e.target.value }))}
+            />
+          </div>
         </form>
       </Modal>
 
-      {/* Record Payment Modal */}
-      <Modal open={showPayModal} onClose={() => setShowPayModal(false)} title={`Pay to ${supplier.company_name}`}
-        footer={<>
-          <button className="btn btn-secondary" onClick={() => setShowPayModal(false)}>Cancel</button>
-          <button className="btn btn-primary" onClick={handlePayment} disabled={saving}>{saving ? 'Saving…' : 'Record Payment'}</button>
-        </>}>
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">Amount (₹) <span className="required">*</span></label>
-            <input className="form-control" type="number" step="0.01" value={payForm.amount} onChange={e => setPayForm(f => ({ ...f, amount: e.target.value }))} />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Payment Date <span className="required">*</span></label>
-            <input className="form-control" type="date" value={payForm.payment_date} onChange={e => setPayForm(f => ({ ...f, payment_date: e.target.value }))} />
-          </div>
-        </div>
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">Payment Method</label>
-            <select className="form-control" value={payForm.payment_method} onChange={e => setPayForm(f => ({ ...f, payment_method: e.target.value }))}>
-              <option value="bank">Bank Transfer / RTGS</option>
-              <option value="cheque">Cheque</option>
-              <option value="cash">Cash</option>
-              <option value="upi">UPI</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Reference / UTR</label>
-            <input className="form-control" value={payForm.reference_number} onChange={e => setPayForm(f => ({ ...f, reference_number: e.target.value }))} placeholder="Cheque / UTR no." />
-          </div>
-        </div>
+      {/* WhatsApp Message Modal */}
+      <Modal
+        open={showWhatsAppModal}
+        onClose={() => setShowWhatsAppModal(false)}
+        title={`Send WhatsApp Message to ${supplier.company_name}`}
+        footer={
+          <>
+            <button className="btn btn-secondary btn-sm" onClick={() => setShowWhatsAppModal(false)}>Cancel</button>
+            <button className="btn btn-whatsapp btn-sm" onClick={handleSendWhatsApp}>
+              Send via WhatsApp
+            </button>
+          </>
+        }
+      >
         <div className="form-group">
-          <label className="form-label">Notes</label>
-          <input className="form-control" value={payForm.notes} onChange={e => setPayForm(f => ({ ...f, notes: e.target.value }))} placeholder="Optional notes" />
+          <label className="form-label">Target Phone Number</label>
+          <input className="form-control" value={supplier.whatsapp_number || supplier.phone || ''} readOnly />
         </div>
-      </Modal>
-
-      {/* Edit Supplier Modal */}
-      <Modal open={showEditModal} onClose={() => setShowEditModal(false)} title="Edit Supplier"
-        footer={<>
-          <button className="btn btn-secondary" onClick={() => setShowEditModal(false)}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleEdit} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</button>
-        </>}>
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">Company Name</label>
-            <input className="form-control" value={form.company_name} onChange={e => setForm(f => ({ ...f, company_name: e.target.value }))} />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Contact Person</label>
-            <input className="form-control" value={form.contact_person} onChange={e => setForm(f => ({ ...f, contact_person: e.target.value }))} />
-          </div>
-        </div>
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">Phone</label>
-            <input className="form-control" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
-          </div>
-          <div className="form-group">
-            <label className="form-label">WhatsApp</label>
-            <input className="form-control" value={form.whatsapp_number} onChange={e => setForm(f => ({ ...f, whatsapp_number: e.target.value }))} />
-          </div>
-        </div>
-        <div className="form-group">
-          <label className="form-label">Address</label>
-          <textarea className="form-control" rows="2" value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} />
-        </div>
-      </Modal>
-
-      {/* Direct WhatsApp Modal */}
-      <Modal open={showWhatsAppModal} onClose={() => setShowWhatsAppModal(false)} title={`Message ${supplier.company_name}`}
-        footer={<>
-          <button className="btn btn-secondary" onClick={() => setShowWhatsAppModal(false)}>Cancel</button>
-          <button className="btn btn-whatsapp" onClick={handleSendWhatsApp}>Send WhatsApp</button>
-        </>}>
         <div className="form-group">
           <label className="form-label">Message Content</label>
-          <textarea className="form-control" rows="6" value={customMessage} onChange={e => setCustomMessage(e.target.value)} placeholder={`Hello ${supplier.company_name}, ...`} />
-        </div>
-        <div className="info-box">
-          Sending to: <strong>{supplier.whatsapp_number || supplier.phone}</strong> via Evolution Go backend service.
+          <textarea
+            className="form-textarea"
+            rows={5}
+            placeholder="Type message to supplier..."
+            value={customMessage}
+            onChange={e => setCustomMessage(e.target.value)}
+            autoFocus
+          />
         </div>
       </Modal>
     </div>

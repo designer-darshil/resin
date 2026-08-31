@@ -6,13 +6,13 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import { PageHeader, StatusBadge, Modal } from '../components/ui.jsx';
 import { fmtQty, fmtDate, today } from '../utils/helpers.js';
 
-const STAGES = [
-  { key: 'draft', label: 'Draft' },
-  { key: 'assigned', label: 'Assigned' },
-  { key: 'in_progress', label: 'In Progress' },
-  { key: 'quality_check', label: 'QC' },
-  { key: 'completed', label: 'Completed' },
-  { key: 'dispatched', label: 'Dispatched' }
+const PIPELINE_STEPS = [
+  { id: 'draft', label: 'Received' },
+  { id: 'assigned', label: 'Assigned' },
+  { id: 'in_progress', label: 'Production' },
+  { id: 'quality_check', label: 'Quality Check' },
+  { id: 'completed', label: 'Ready / Finished' },
+  { id: 'dispatched', label: 'Dispatched' }
 ];
 
 export default function CoatingJobDetail() {
@@ -30,6 +30,7 @@ export default function CoatingJobDetail() {
   const [qcForm, setQcForm] = useState({ completed_quantity: '', rejected_quantity: '0', notes: '' });
   const [customMessage, setCustomMessage] = useState('');
   const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
 
   const load = async () => {
     try {
@@ -55,7 +56,7 @@ export default function CoatingJobDetail() {
     setSaving(true);
     try {
       await jobsApi.assign(id, assignForm);
-      toast.success('Employee assigned to job');
+      toast.success('Operator assigned successfully');
       setShowAssignModal(false);
       load();
     } catch (err) {
@@ -70,11 +71,11 @@ export default function CoatingJobDetail() {
     const completed = parseFloat(qcForm.completed_quantity) || 0;
     const rejected = parseFloat(qcForm.rejected_quantity) || 0;
     if (completed <= 0 && rejected <= 0) {
-      toast.error('Enter completed or rejected quantity'); return;
+      toast.error('Enter valid completed or rejected quantity'); return;
     }
     const remaining = job.input_quantity - (job.completed_quantity || 0) - (job.rejected_quantity || 0);
     if (completed + rejected > remaining) {
-      toast.error(`Total (${completed + rejected}) exceeds remaining quantity (${remaining} pcs)`);
+      toast.error(`Total (${completed + rejected}) exceeds remaining batch pieces (${remaining} pcs)`);
       return;
     }
 
@@ -85,7 +86,7 @@ export default function CoatingJobDetail() {
         rejected_quantity: rejected,
         notes: qcForm.notes
       });
-      toast.success('Production QC record saved');
+      toast.success('Quality check recorded');
       setShowQCModal(false);
       setQcForm({ completed_quantity: '', rejected_quantity: '0', notes: '' });
       load();
@@ -97,9 +98,9 @@ export default function CoatingJobDetail() {
   };
 
   const handleSendWhatsApp = async () => {
-    if (!customMessage.trim()) { toast.error('Enter message content'); return; }
+    if (!customMessage.trim()) { toast.error('Enter message text'); return; }
     const phone = job.customer_whatsapp;
-    if (!phone) { toast.error('No WhatsApp number for this buyer party'); return; }
+    if (!phone) { toast.error('No WhatsApp number registered for buyer party'); return; }
 
     try {
       const res = await fetch('/api/evolution/send', {
@@ -117,267 +118,408 @@ export default function CoatingJobDetail() {
         })
       });
       if (res.ok) {
-        toast.success('WhatsApp notification sent');
+        toast.success('WhatsApp update sent to party');
       } else {
         const num = phone.replace(/[^0-9]/g, '');
-        window.open(`https://wa.me/${num.startsWith('91') ? num : '91' + num}?text=${encodeURIComponent(customMessage)}`, '_blank');
+        const fullNum = num.startsWith('91') ? num : `91${num}`;
+        window.open(`https://wa.me/${fullNum}?text=${encodeURIComponent(customMessage)}`, '_blank');
+        toast.info('Opened WhatsApp chat');
       }
     } catch {
       const num = phone.replace(/[^0-9]/g, '');
-      window.open(`https://wa.me/${num.startsWith('91') ? num : '91' + num}?text=${encodeURIComponent(customMessage)}`, '_blank');
+      const fullNum = num.startsWith('91') ? num : `91${num}`;
+      window.open(`https://wa.me/${fullNum}?text=${encodeURIComponent(customMessage)}`, '_blank');
     }
 
     setShowWhatsAppModal(false);
     setCustomMessage('');
   };
 
-  if (loading) return <div className="page"><div className="skeleton skeleton-line" style={{ height: 32, width: 300 }} /></div>;
+  if (loading) return (
+    <div className="page">
+      <div className="skeleton-line" style={{ height: 28, width: 220, marginBottom: 12 }} />
+      <div className="skeleton-line" style={{ height: 90 }} />
+    </div>
+  );
   if (!job) return null;
 
-  const remainingQty = Math.max(0, job.input_quantity - (job.completed_quantity || 0) - (job.rejected_quantity || 0));
-
-  // Determine current stage index
-  let currentStageIndex = 0;
-  if (job.job_status === 'assigned') currentStageIndex = 1;
-  else if (job.job_status === 'in_progress') currentStageIndex = 2;
-  else if (job.job_status === 'quality_check') currentStageIndex = 3;
-  else if (job.job_status === 'completed') currentStageIndex = 4;
-  else if (job.job_status === 'dispatched') currentStageIndex = 5;
+  const currentStepIndex = PIPELINE_STEPS.findIndex(s => s.id === job.job_status);
+  const remainingPcs = job.input_quantity - (job.completed_quantity || 0) - (job.rejected_quantity || 0);
 
   return (
     <div className="page">
+      {/* Breadcrumb Navigation */}
       <div className="breadcrumb">
         <Link to="/coating-jobs">Coating Jobs</Link>
-        <span className="breadcrumb-sep">›</span>
-        <span className="breadcrumb-current">{job.job_code}</span>
+        <span>/</span>
+        <strong>{job.job_code}</strong>
       </div>
 
-      <PageHeader
-        title={job.job_code}
-        subtitle={`${job.customer_name || 'No Party'} · Diamond Coating Job`}
-        actions={<>
-          <StatusBadge status={job.job_status} />
-          {hasPermission('coating_jobs', 'can_edit') && (
-            <button className="btn btn-secondary" onClick={() => setShowAssignModal(true)}>+ Assign Coater</button>
-          )}
-          {hasPermission('coating_jobs', 'can_edit') && remainingQty > 0 && (
-            <button className="btn btn-primary" onClick={() => setShowQCModal(true)}>+ Record Production QC</button>
-          )}
-          {job.customer_whatsapp && (
-            <button className="btn btn-whatsapp" onClick={() => {
-              setCustomMessage(`Hello ${job.customer_name},\n\nUpdate on your coating job ${job.job_code}:\nStatus: ${job.job_status}\nCompleted: ${job.completed_quantity} pcs / ${job.input_quantity} pcs.\n\nThank you,\nResin Diamond Coating`);
-              setShowWhatsAppModal(true);
-            }}>📱 WhatsApp Buyer</button>
-          )}
-        </>}
-      />
-
-      {/* Visual Workflow Stages Bar */}
-      <div style={{
-        background: 'var(--color-surface, #1e1e24)', border: '1px solid var(--color-border, #333)',
-        borderRadius: 10, padding: '16px 20px', marginBottom: 24
-      }}>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--color-text-muted)', marginBottom: 12 }}>
-          WORKFLOW STAGES
+      {/* Main Header */}
+      <div className="page-header">
+        <div className="page-header-left">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <h1 className="page-title">{job.job_code}</h1>
+            <StatusBadge status={job.job_status} />
+          </div>
+          <p className="page-subtitle">
+            Party: <strong>{job.customer_name || 'In-House Job'}</strong> · {fmtQty(job.input_quantity)} pcs · Operator: {job.employee_name || 'Unassigned'}
+          </p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative' }}>
-          {STAGES.map((st, idx) => {
-            const isCompleted = idx < currentStageIndex;
-            const isCurrent = idx === currentStageIndex;
+
+        <div className="page-header-actions">
+          {job.customer_whatsapp && (
+            <button className="btn btn-whatsapp btn-sm" onClick={() => setShowWhatsAppModal(true)}>
+              WhatsApp Party
+            </button>
+          )}
+          <button className="btn btn-secondary btn-sm" onClick={() => setShowAssignModal(true)}>
+            Assign Operator
+          </button>
+          {remainingPcs > 0 && (
+            <button className="btn btn-primary btn-sm" onClick={() => setShowQCModal(true)}>
+              Record QC &amp; Completion
+            </button>
+          )}
+          {job.job_status === 'completed' && (
+            <button className="btn btn-primary btn-sm" onClick={() => navigate('/dispatch')}>
+              Ready for Dispatch →
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Operational Workflow Progress Strip */}
+      <div style={{ marginBottom: 'var(--space-6)' }}>
+        <div className="workflow-pipeline">
+          {PIPELINE_STEPS.map((step, idx) => {
+            const isCompleted = idx < currentStepIndex;
+            const isCurrent = idx === currentStepIndex;
             return (
-              <div key={st.key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 2, flex: 1 }}>
-                <div style={{
-                  width: 28, height: 28, borderRadius: '50%',
-                  background: isCurrent ? 'var(--color-primary, #60a5fa)' : isCompleted ? 'var(--color-success, #10b981)' : 'var(--color-bg, #121216)',
-                  border: isCurrent ? '2px solid #fff' : `2px solid ${isCompleted ? 'var(--color-success)' : 'var(--color-border)'}`,
-                  color: isCurrent || isCompleted ? '#fff' : 'var(--color-text-muted)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700
-                }}>
-                  {isCompleted ? '✓' : idx + 1}
-                </div>
-                <div style={{
-                  fontSize: 12, marginTop: 6,
-                  fontWeight: isCurrent ? 700 : 500,
-                  color: isCurrent ? 'var(--color-primary)' : isCompleted ? 'var(--color-text)' : 'var(--color-text-muted)'
-                }}>
-                  {st.label}
-                </div>
+              <div
+                key={step.id}
+                className={`workflow-step ${isCompleted ? 'completed' : ''} ${isCurrent ? 'current' : ''}`}
+              >
+                <span>{isCompleted ? '✓' : `${idx + 1}.`}</span>
+                <span>{step.label}</span>
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* Production & Spec KPI Strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 24 }}>
-        <div className="stat-card">
-          <div className="stat-card-label">Input Quantity</div>
-          <div className="stat-card-value">{fmtQty(job.input_quantity)} pcs</div>
-          <div className="stat-card-sub">{job.input_weight ? `${job.input_weight} ct` : 'Raw Batch'}</div>
+      {/* Numerical Snapshot Strip */}
+      <div className="stat-strip">
+        <div className="stat-strip-item">
+          <div className="stat-strip-label">Input Quantity</div>
+          <div className="stat-strip-value">{fmtQty(job.input_quantity)} pcs</div>
+          <div className="stat-strip-sub">{job.input_weight ? `${job.input_weight} ct` : 'Raw lot'}</div>
         </div>
-        <div className="stat-card">
-          <div className="stat-card-label">Completed / QC Pass</div>
-          <div className="stat-card-value text-success">{fmtQty(job.completed_quantity)} pcs</div>
-          <div className="stat-card-sub">Finished goods</div>
+        <div className="stat-strip-item">
+          <div className="stat-strip-label">Completed (Passed QC)</div>
+          <div className="stat-strip-value" style={{ color: 'var(--status-success)' }}>
+            {fmtQty(job.completed_quantity || 0)} pcs
+          </div>
+          <div className="stat-strip-sub">Quality approved</div>
         </div>
-        <div className="stat-card">
-          <div className="stat-card-label">Rejected Quantity</div>
-          <div className="stat-card-value text-error">{fmtQty(job.rejected_quantity)} pcs</div>
-          <div className="stat-card-sub">QC failed</div>
+        <div className="stat-strip-item">
+          <div className="stat-strip-label">Rejected / Loss</div>
+          <div className="stat-strip-value" style={{ color: job.rejected_quantity > 0 ? 'var(--status-error)' : 'inherit' }}>
+            {fmtQty(job.rejected_quantity || 0)} pcs
+          </div>
+          <div className="stat-strip-sub">Coating defects</div>
         </div>
-        <div className="stat-card">
-          <div className="stat-card-label">Remaining to Coat</div>
-          <div className="stat-card-value text-warning">{fmtQty(remainingQty)} pcs</div>
-          <div className="stat-card-sub">In process</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card-label">Coating Spec</div>
-          <div className="stat-card-value" style={{ fontSize: 16 }}>{job.coating_type || 'Standard'}</div>
-          <div className="stat-card-sub">Due: {fmtDate(job.expected_completion) || 'Not set'}</div>
+        <div className="stat-strip-item">
+          <div className="stat-strip-label">In Production / Remaining</div>
+          <div className="stat-strip-value" style={{ color: remainingPcs > 0 ? 'var(--status-info)' : 'var(--text-muted)' }}>
+            {fmtQty(remainingPcs)} pcs
+          </div>
+          <div className="stat-strip-sub">Pending inspection</div>
         </div>
       </div>
 
-      {/* Detailed Sections */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-        {/* Diamond & Job Details */}
-        <div className="detail-section">
-          <h2 className="detail-section-title">Diamond &amp; Batch Specifications</h2>
-          <div className="detail-field">
-            <div className="detail-field-label">Buyer / Customer Party</div>
-            <div className="detail-field-value">
-              {job.customer_id ? <Link to={`/customers/${job.customer_id}`}>{job.customer_name}</Link> : '—'}
-            </div>
-          </div>
-          <div className="detail-field">
-            <div className="detail-field-label">Source Purchase Batch</div>
-            <div className="detail-field-value">{job.purchase_code || 'Direct Raw'}</div>
-          </div>
-          <div className="detail-field">
-            <div className="detail-field-label">Shape &amp; Type</div>
-            <div className="detail-field-value">{[job.shape, job.diamond_type].filter(Boolean).join(' ') || 'Standard'}</div>
-          </div>
-          <div className="detail-field">
-            <div className="detail-field-label">Size / Sieve / Color</div>
-            <div className="detail-field-value">{[job.size, job.color, job.clarity].filter(Boolean).join(' · ') || '—'}</div>
-          </div>
-          <div className="detail-field">
-            <div className="detail-field-label">Coating Date</div>
-            <div className="detail-field-value">{fmtDate(job.coating_date)}</div>
-          </div>
-          <div className="detail-field">
-            <div className="detail-field-label">Special Notes</div>
-            <div className="detail-field-value">{job.notes || '—'}</div>
-          </div>
-        </div>
-
-        {/* Assigned Coaters & QC History */}
-        <div className="detail-section">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <h2 className="detail-section-title" style={{ margin: 0 }}>Assigned Employees</h2>
-            <button className="btn btn-secondary btn-sm" onClick={() => setShowAssignModal(true)}>+ Assign</button>
-          </div>
-          {(job.assignments || []).map(a => (
-            <div key={a.id} style={{
-              background: 'var(--color-bg)', padding: '10px 14px', borderRadius: 6,
-              marginBottom: 8, border: '1px solid var(--color-border)', display: 'flex',
-              justifyContent: 'space-between', alignItems: 'center'
-            }}>
-              <div>
-                <strong>{a.employee_name}</strong>
-                <div className="text-xs text-muted">Assigned on {fmtDate(a.assigned_date)}</div>
-              </div>
-              <span className="text-sm font-semibold">{a.completed_quantity || 0} completed</span>
-            </div>
-          ))}
-          {(!job.assignments || job.assignments.length === 0) && (
-            <p className="text-muted" style={{ padding: '10px 0' }}>No employee assigned to this coating job yet.</p>
-          )}
-
-          <h2 className="detail-section-title" style={{ marginTop: 24 }}>Quality Check (QC) History</h2>
-          {(job.quality_checks || []).map(qc => (
-            <div key={qc.id} style={{
-              background: 'var(--color-bg)', padding: '10px 14px', borderRadius: 6,
-              marginBottom: 8, border: '1px solid var(--color-border)'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span className="text-xs text-muted">{fmtDate(qc.check_date || qc.created_at)} · Checked by {qc.checked_by_name || 'QC Inspector'}</span>
-                <span className={`tag ${qc.status === 'passed' ? 'tag-success' : 'tag-warning'}`}>{qc.status}</span>
-              </div>
-              <div style={{ marginTop: 4, display: 'flex', gap: 16 }}>
-                <span className="text-success font-semibold">Passed: {qc.passed_quantity} pcs</span>
-                <span className="text-error font-semibold">Rejected: {qc.failed_quantity} pcs</span>
-              </div>
-              {qc.notes && <div className="text-xs text-muted" style={{ marginTop: 4 }}>Note: {qc.notes}</div>}
-            </div>
-          ))}
-          {(!job.quality_checks || job.quality_checks.length === 0) && (
-            <p className="text-muted" style={{ padding: '10px 0' }}>No QC records submitted yet.</p>
-          )}
-        </div>
+      {/* Tabs */}
+      <div className="tabs">
+        <button className={`tab ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')}>
+          Job Overview &amp; Specs
+        </button>
+        <button className={`tab ${activeTab === 'qc' ? 'active' : ''}`} onClick={() => setActiveTab('qc')}>
+          QC Inspection History
+        </button>
+        <button className={`tab ${activeTab === 'operator' ? 'active' : ''}`} onClick={() => setActiveTab('operator')}>
+          Operator Assignments
+        </button>
       </div>
 
-      {/* Assign Employee Modal */}
-      <Modal open={showAssignModal} onClose={() => setShowAssignModal(false)} title="Assign Coater Employee"
-        footer={<>
-          <button className="btn btn-secondary" onClick={() => setShowAssignModal(false)}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleAssign} disabled={saving}>{saving ? 'Assigning…' : 'Assign Employee'}</button>
-        </>}>
-        <div className="form-group">
-          <label className="form-label">Employee <span className="required">*</span></label>
-          <select className="form-control" value={assignForm.employee_id} onChange={e => setAssignForm(f => ({ ...f, employee_id: e.target.value }))}>
-            <option value="">Select coater…</option>
-            {employees.map(e => (
-              <option key={e.id} value={e.id}>{e.full_name} ({e.employee_code}) — {e.department || 'Coating'}</option>
-            ))}
-          </select>
-        </div>
-        <div className="form-group">
-          <label className="form-label">Assignment Date</label>
-          <input className="form-control" type="date" value={assignForm.assigned_date} onChange={e => setAssignForm(f => ({ ...f, assigned_date: e.target.value }))} />
-        </div>
-        <div className="form-group">
-          <label className="form-label">Instructions / Notes</label>
-          <input className="form-control" value={assignForm.notes} onChange={e => setAssignForm(f => ({ ...f, notes: e.target.value }))} placeholder="Specific coating instructions" />
-        </div>
-      </Modal>
+      {activeTab === 'overview' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1fr) minmax(320px, 1.4fr)', gap: 'var(--space-6)' }}>
+          {/* Left Panel: Specifications */}
+          <div className="panel">
+            <div className="form-section-title" style={{ marginTop: 0 }}>Diamond Batch Details</div>
+            <div className="data-row">
+              <span className="data-row-label">Coating Grade / Type</span>
+              <span className="data-row-value">{job.coating_type || 'Standard Resin'}</span>
+            </div>
+            <div className="data-row">
+              <span className="data-row-label">Diamond Type</span>
+              <span className="data-row-value">{job.diamond_type || 'Standard'}</span>
+            </div>
+            <div className="data-row">
+              <span className="data-row-label">Shape &amp; Cut</span>
+              <span className="data-row-value">{job.shape || 'Round'}</span>
+            </div>
+            <div className="data-row">
+              <span className="data-row-label">Size / Sieve</span>
+              <span className="data-row-value">{job.size || '—'}</span>
+            </div>
+            <div className="data-row">
+              <span className="data-row-label">Color &amp; Clarity</span>
+              <span className="data-row-value">{job.color || '—'} / {job.clarity || '—'}</span>
+            </div>
+            <div className="data-row">
+              <span className="data-row-label">Coating Date</span>
+              <span className="data-row-value">{fmtDate(job.coating_date)}</span>
+            </div>
+            <div className="data-row">
+              <span className="data-row-label">Due Date</span>
+              <span className="data-row-value" style={{ color: 'var(--color-primary)' }}>{fmtDate(job.expected_completion)}</span>
+            </div>
+          </div>
 
-      {/* Production & QC Record Modal */}
-      <Modal open={showQCModal} onClose={() => setShowQCModal(false)} title="Record Production &amp; QC Update"
-        footer={<>
-          <button className="btn btn-secondary" onClick={() => setShowQCModal(false)}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleQC} disabled={saving}>{saving ? 'Saving QC…' : 'Save Production QC'}</button>
-        </>}>
-        <div className="info-box" style={{ marginBottom: 14 }}>
-          Remaining to coat: <strong>{fmtQty(remainingQty)} pcs</strong> (from total {job.input_quantity} pcs)
+          {/* Right Panel: Party & Status */}
+          <div className="panel">
+            <div className="form-section-title" style={{ marginTop: 0 }}>Party &amp; Origin Context</div>
+            <div className="data-row">
+              <span className="data-row-label">Buyer Party</span>
+              <span className="data-row-value">{job.customer_name || 'In-House Manufacturing'}</span>
+            </div>
+            <div className="data-row">
+              <span className="data-row-label">Party Phone</span>
+              <span className="data-row-value">{job.customer_phone || '—'}</span>
+            </div>
+            <div className="data-row">
+              <span className="data-row-label">Source Purchase Code</span>
+              <span className="data-row-value" style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-primary)' }}>
+                {job.purchase_code || 'Raw Inventory'}
+              </span>
+            </div>
+            <div className="data-row">
+              <span className="data-row-label">Assigned Operator</span>
+              <span className="data-row-value">{job.employee_name || 'Unassigned'}</span>
+            </div>
+            <div className="data-row">
+              <span className="data-row-label">Operator Code</span>
+              <span className="data-row-value" style={{ fontFamily: 'var(--font-mono)' }}>{job.employee_code || '—'}</span>
+            </div>
+            {job.notes && (
+              <div style={{ marginTop: 16, padding: 12, background: 'var(--bg-subtle)', borderRadius: 'var(--radius-md)', fontSize: 13 }}>
+                <strong style={{ display: 'block', marginBottom: 4, fontSize: 11, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Formula Notes</strong>
+                {job.notes}
+              </div>
+            )}
+          </div>
         </div>
-        <div className="form-row">
+      )}
+
+      {activeTab === 'qc' && (
+        <div className="table-wrapper">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Date &amp; Time</th>
+                <th>Operator</th>
+                <th className="num-col">Passed Quantity</th>
+                <th className="num-col">Rejected Quantity</th>
+                <th>Inspection Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(job.assignments || []).map((a, i) => (
+                <tr key={i}>
+                  <td>{fmtDate(a.assigned_date)}</td>
+                  <td style={{ fontWeight: 600 }}>{a.employee_name}</td>
+                  <td className="num-col" style={{ color: 'var(--status-success)', fontWeight: 700 }}>
+                    {fmtQty(a.completed_quantity || 0)} pcs
+                  </td>
+                  <td className="num-col" style={{ color: a.rejected_quantity > 0 ? 'var(--status-error)' : 'var(--text-muted)' }}>
+                    {fmtQty(a.rejected_quantity || 0)} pcs
+                  </td>
+                  <td style={{ color: 'var(--text-secondary)' }}>{a.notes || '—'}</td>
+                </tr>
+              ))}
+              {(!job.assignments || job.assignments.length === 0) && (
+                <tr>
+                  <td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>
+                    No QC inspection records submitted yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {activeTab === 'operator' && (
+        <div className="panel">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <span style={{ fontWeight: 600 }}>Assigned Coating Operators</span>
+            <button className="btn btn-secondary btn-sm" onClick={() => setShowAssignModal(true)}>
+              + Assign Additional Operator
+            </button>
+          </div>
+          <div className="data-row">
+            <span className="data-row-label">Primary Operator</span>
+            <span className="data-row-value">{job.employee_name || 'None'}</span>
+          </div>
+          <div className="data-row">
+            <span className="data-row-label">Operator Code</span>
+            <span className="data-row-value">{job.employee_code || '—'}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Assign Operator */}
+      <Modal
+        open={showAssignModal}
+        onClose={() => setShowAssignModal(false)}
+        title="Assign Operator to Job"
+        footer={
+          <>
+            <button className="btn btn-secondary btn-sm" onClick={() => setShowAssignModal(false)}>Cancel</button>
+            <button className="btn btn-primary btn-sm" onClick={handleAssign} disabled={saving}>
+              {saving ? 'Assigning…' : 'Confirm Assignment'}
+            </button>
+          </>
+        }
+      >
+        <form onSubmit={handleAssign}>
           <div className="form-group">
-            <label className="form-label">Passed / Completed Qty (pcs) <span className="required">*</span></label>
-            <input className="form-control" type="number" inputMode="numeric" value={qcForm.completed_quantity} onChange={e => setQcForm(f => ({ ...f, completed_quantity: e.target.value }))} placeholder="Passed pieces" autoFocus />
+            <label className="form-label">Coater Operator *</label>
+            <select
+              className="form-control"
+              value={assignForm.employee_id}
+              onChange={e => setAssignForm(f => ({ ...f, employee_id: e.target.value }))}
+              required
+              autoFocus
+            >
+              <option value="">-- Select Active Operator --</option>
+              {employees.map(emp => (
+                <option key={emp.id} value={emp.id}>{emp.full_name} ({emp.employee_code})</option>
+              ))}
+            </select>
           </div>
           <div className="form-group">
-            <label className="form-label">Rejected / Defective Qty (pcs)</label>
-            <input className="form-control" type="number" inputMode="numeric" value={qcForm.rejected_quantity} onChange={e => setQcForm(f => ({ ...f, rejected_quantity: e.target.value }))} placeholder="0" />
+            <label className="form-label">Assignment Date</label>
+            <input
+              className="form-control"
+              type="date"
+              value={assignForm.assigned_date}
+              onChange={e => setAssignForm(f => ({ ...f, assigned_date: e.target.value }))}
+            />
           </div>
-        </div>
-        <div className="form-group">
-          <label className="form-label">QC Notes / Rejection Reason</label>
-          <textarea className="form-control" rows="2" value={qcForm.notes} onChange={e => setQcForm(f => ({ ...f, notes: e.target.value }))} placeholder="e.g. Surface bubbles, improper coating cure, etc." />
-        </div>
+          <div className="form-group">
+            <label className="form-label">Instructions</label>
+            <textarea
+              className="form-textarea"
+              placeholder="Shift instructions or machine allocation..."
+              value={assignForm.notes}
+              onChange={e => setAssignForm(f => ({ ...f, notes: e.target.value }))}
+            />
+          </div>
+        </form>
       </Modal>
 
-      {/* Direct WhatsApp Modal */}
-      <Modal open={showWhatsAppModal} onClose={() => setShowWhatsAppModal(false)} title={`Message Buyer (${job.customer_name})`}
-        footer={<>
-          <button className="btn btn-secondary" onClick={() => setShowWhatsAppModal(false)}>Cancel</button>
-          <button className="btn btn-whatsapp" onClick={handleSendWhatsApp}>Send WhatsApp</button>
-        </>}>
+      {/* Modal: Record QC */}
+      <Modal
+        open={showQCModal}
+        onClose={() => setShowQCModal(false)}
+        title="Record Production QC Inspection"
+        footer={
+          <>
+            <button className="btn btn-secondary btn-sm" onClick={() => setShowQCModal(false)}>Cancel</button>
+            <button className="btn btn-primary btn-sm" onClick={handleQC} disabled={saving}>
+              {saving ? 'Submitting…' : 'Record QC Results'}
+            </button>
+          </>
+        }
+      >
+        <form onSubmit={handleQC}>
+          <div className="panel-subtle" style={{ marginBottom: 16 }}>
+            <div className="data-row">
+              <span className="data-row-label">Batch Total:</span>
+              <span className="data-row-value">{fmtQty(job.input_quantity)} pcs</span>
+            </div>
+            <div className="data-row">
+              <span className="data-row-label">Remaining to Inspect:</span>
+              <span className="data-row-value" style={{ color: 'var(--color-primary)' }}>{fmtQty(remainingPcs)} pcs</span>
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label">Passed QC Quantity (pcs) *</label>
+              <input
+                className="form-control"
+                type="number"
+                placeholder={`Max ${remainingPcs}`}
+                value={qcForm.completed_quantity}
+                onChange={e => setQcForm(f => ({ ...f, completed_quantity: e.target.value }))}
+                required
+                autoFocus
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Defects / Rejects (pcs)</label>
+              <input
+                className="form-control"
+                type="number"
+                placeholder="0"
+                value={qcForm.rejected_quantity}
+                onChange={e => setQcForm(f => ({ ...f, rejected_quantity: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">QC Inspector Remarks</label>
+            <textarea
+              className="form-textarea"
+              placeholder="Visual inspection remarks, coating adhesion, clarity verification..."
+              value={qcForm.notes}
+              onChange={e => setQcForm(f => ({ ...f, notes: e.target.value }))}
+            />
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal: WhatsApp */}
+      <Modal
+        open={showWhatsAppModal}
+        onClose={() => setShowWhatsAppModal(false)}
+        title="Notify Customer via WhatsApp"
+        footer={
+          <>
+            <button className="btn btn-secondary btn-sm" onClick={() => setShowWhatsAppModal(false)}>Cancel</button>
+            <button className="btn btn-whatsapp btn-sm" onClick={handleSendWhatsApp}>
+              Send WhatsApp Update
+            </button>
+          </>
+        }
+      >
+        <div className="form-group">
+          <label className="form-label">Customer WhatsApp</label>
+          <input className="form-control" value={job.customer_whatsapp || ''} readOnly />
+        </div>
         <div className="form-group">
           <label className="form-label">Message Content</label>
-          <textarea className="form-control" rows="6" value={customMessage} onChange={e => setCustomMessage(e.target.value)} />
-        </div>
-        <div className="info-box">
-          Recipient: <strong>{job.customer_whatsapp}</strong> (Buyer)
+          <textarea
+            className="form-textarea"
+            rows={5}
+            placeholder="Type update message to customer..."
+            value={customMessage}
+            onChange={e => setCustomMessage(e.target.value)}
+            autoFocus
+          />
         </div>
       </Modal>
     </div>
